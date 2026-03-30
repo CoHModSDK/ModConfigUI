@@ -18,6 +18,7 @@ namespace ConfigUi::Frontend {
         constexpr char kPlatformModuleName[] = "Platform.dll";
         constexpr char kLocalizerModuleName[] = "Localizer.dll";
         constexpr char kFilesystemModuleName[] = "Filesystem.dll";
+        constexpr char kGameExecutableModuleName[] = "RelicCOH.exe";
 
         // Filesystem.dll exports for registering our .screen file override.
         // FilePathHD::Create(wchar_t const*, StreamMode) -> Source*   (__stdcall)
@@ -41,11 +42,11 @@ namespace ConfigUi::Frontend {
         constexpr std::size_t kOpaqueLocStringStorageSize = 256u;
         constexpr std::size_t kOpaqueCustomListBoxStorageSize = 16384u;
         constexpr std::size_t kOpaqueCustomListBoxItemOldStorageSize = 16384u;
+        constexpr std::size_t kOpaqueNativeSliderStorageSize = 1024u;
         constexpr std::size_t kVisibleRowCount = 5u;
         constexpr char kGroupWidgetTypeName[] = "Group";
         constexpr char kComboBoxWidgetTypeName[] = "ComboBox";
         constexpr char kCheckButtonWidgetTypeName[] = "CheckButton";
-        constexpr char kProgressBarWidgetTypeName[] = "ProgressBar";
         constexpr char kTextLabelWidgetTypeName[] = "TextLabel";
         constexpr char kScreenName[] = "cohmodconfigui";
         constexpr char kTemplateScreenName[] = "prompt_performance_test";
@@ -59,7 +60,7 @@ namespace ConfigUi::Frontend {
         constexpr char kRowLabelNamePrefix[] = "cohmodconfigui_rowlabel_";
         constexpr char kRowButtonNamePrefix[] = "cohmodconfigui_row_";
         constexpr char kRowCheckButtonNamePrefix[] = "cohmodconfigui_rowcheck_";
-        constexpr char kRowProgressBarNamePrefix[] = "cohmodconfigui_rowprog_";
+        constexpr char kRowSliderNamePrefix[] = "cohmodconfigui_rowslider_";
         // Keep the options-menu radio-button donor recorded for later investigation.
         constexpr char kReferenceRadioButtonDonorScreenName[] = "optionsmenu";
         constexpr char kReferenceRadioButtonDonorWidgetName[] = "rdo_graphics_custom";
@@ -68,10 +69,6 @@ namespace ConfigUi::Frontend {
         // Keep the skirmish ready donor recorded as a fallback reference.
         constexpr char kReferenceCheckButtonDonorScreenName[] = "skirmishmissionsetup";
         constexpr char kReferenceCheckButtonDonorWidgetName[] = "btnReady";
-        constexpr char kDefaultStyleSetName[] = "DefaultStyles";
-        constexpr char kDefaultCheckButtonStyleName[] = "defStyleCheckBox";
-        constexpr char kProgressBarDonorScreenName[] = "optionsmenu";
-        constexpr char kProgressBarDonorWidgetName[] = "progress_memory_used";
         constexpr char kOptionsmenuDonorScreenName[] = "optionsmenu";
         constexpr char kDropdownDonorWidgetName[] = "drop_enviromental_reverb";
         constexpr char kDropdownButtonDonorWidgetName[] = "btn_drop_enviromental_reverb";
@@ -91,7 +88,6 @@ namespace ConfigUi::Frontend {
         constexpr std::uintptr_t kFindWidgetByNameRva = 0x0003BAB0u;
         constexpr int kRenderExtensionId = 6;
         constexpr int kDrawChildrenExtensionId = 1;
-        constexpr int kProgressChildExtensionId = 14;
         constexpr int kDefaultScreenActivationType = 0;
         constexpr int kWidgetFactoryCreateFlag = 1;
         constexpr float kNativeAspectRatio = 1.77778f;
@@ -138,12 +134,24 @@ namespace ConfigUi::Frontend {
         constexpr float kDropdownItemLabelPositionY = 0.0f;
         constexpr float kDropdownItemLabelSizeX = 0.96f;
         constexpr float kDropdownItemLabelSizeY = 1.0f;
-        constexpr float kReferenceRadioButtonSizeX = 0.21809f;
-        constexpr float kReferenceRadioButtonSizeY = 0.05085f;
         constexpr float kRowCheckButtonSizeX = 0.18750f;
         constexpr float kRowCheckButtonSizeY = 0.04167f;
-        constexpr float kRowProgressBarSizeX = 0.18f;
-        constexpr float kRowProgressBarSizeY = 0.030f;
+        constexpr float kRowSliderSizeX = 0.14858f;
+        constexpr float kRowSliderSizeY = 0.05416f;
+        constexpr float kRowSliderOffsetY = (kRowLabelSizeY - kRowSliderSizeY) * 0.5f;
+        constexpr float kRowSliderButtonSizeX = 0.01635f;
+        constexpr float kRowSliderButtonSizeY = 0.04524f;
+        constexpr float kRowSliderButtonPositionY = 0.00519f;
+        constexpr float kRowSliderButtonMinPositionX = 0.0f;
+        constexpr float kRowSliderButtonMaxPositionX = kRowSliderSizeX - kRowSliderButtonSizeX;
+        constexpr std::uintptr_t kNativeSliderBindInputRva = 0x0056D1C0u;
+        constexpr std::size_t kNativeSliderKnobProxyOffset = 0x110u;
+        constexpr std::size_t kNativeSliderCallbackOffset = 0x1E0u;
+        constexpr std::size_t kNativeSliderCurrentValueOffset = 0x200u;
+        constexpr std::size_t kNativeSliderEnabledOffset = 0x204u;
+        constexpr std::size_t kNativeSliderMinValueOffset = 0x208u;
+        constexpr std::size_t kNativeSliderMaxValueOffset = 0x20Cu;
+        constexpr float kSliderProgressEpsilon = 0.0005f;
 
         using ScreenManagerHandle = void;
         using StyleManagerHandle = void;
@@ -180,6 +188,10 @@ namespace ConfigUi::Frontend {
         using WidgetProxyForceActiveFn = void(__thiscall*)(void* widgetProxy, bool active);
         using GenericWidgetCtorFn = void(__thiscall*)(void* genericWidget);
         using GenericWidgetDtorFn = void(__thiscall*)(void* genericWidget);
+        using CustomWidgetCtorFn = void(__thiscall*)(void* customWidget);
+        using CustomWidgetDtorFn = void(__thiscall*)(void* customWidget);
+        using ArtLabelCtorFn = void(__thiscall*)(void* artLabel);
+        using ArtLabelDtorFn = void(__thiscall*)(void* artLabel);
         using ButtonCtorFn = void(__thiscall*)(void* button);
         using ButtonDtorFn = void(__thiscall*)(void* button);
         using ButtonSetTextFn = void(__thiscall*)(void* button, const void* locString);
@@ -188,23 +200,6 @@ namespace ConfigUi::Frontend {
         using CheckButtonSetCheckedFn = void(__thiscall*)(void* checkButton, bool checked);
         using CheckButtonGetCheckedFn = bool(__thiscall*)(const void* checkButton);
         using CheckButtonSetTextFn = void(__thiscall*)(void* checkButton, const void* locString);
-        using ProgressBarCtorFn = void(__thiscall*)(void* progressBar);
-        using ProgressBarDtorFn = void(__thiscall*)(void* progressBar);
-        using ProgressBarSetProgressFn = void(__thiscall*)(void* progressBar, float progress);
-        using ProgressBarSetRangeFn = void(__thiscall*)(void* progressBar, float min, float max);
-        using ProgressBarGetProgressFn = float(__thiscall*)(const void* progressBar);
-        using ProgressBarSetTextureFn = void(__thiscall*)(void* progressBar, const char* texturePath);
-        using ProgressBarSetProgressBarTypeFn = void(__thiscall*)(void* progressBar, bool type);
-        using ProgressBarSetStepSizeFn = void(__thiscall*)(void* progressBar, float stepSize);
-        using ProgressBarIncrementFn = void(__thiscall*)(void* progressBar, long delta);
-
-        struct MathPrimColour {
-            std::uint8_t r;
-            std::uint8_t g;
-            std::uint8_t b;
-            std::uint8_t a;
-        };
-        using ProgressBarSetProgressColourFn = void(__thiscall*)(void* progressBar, const MathPrimColour& colour);
         using TextLabelCtorFn = void(__thiscall*)(void* textLabel);
         using TextLabelDtorFn = void(__thiscall*)(void* textLabel);
         using TextLabelSetTextFn = void(__thiscall*)(void* textLabel, const void* locString);
@@ -256,12 +251,6 @@ namespace ConfigUi::Frontend {
             const void* Get() const { return storage.data(); }
         };
 
-        struct OpaqueProgressBar {
-            alignas(16) std::array<std::byte, kOpaqueButtonStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-            const void* Get() const { return storage.data(); }
-        };
-
         struct OpaqueTextLabel {
             alignas(16) std::array<std::byte, kOpaqueTextLabelStorageSize> storage = {};
             void* Get() { return storage.data(); }
@@ -283,6 +272,46 @@ namespace ConfigUi::Frontend {
             alignas(16) std::array<std::byte, kOpaqueCustomListBoxItemOldStorageSize> storage = {};
             void* Get() { return storage.data(); }
             const void* Get() const { return storage.data(); }
+        };
+
+        struct NativeSliderCallback {
+            void* object = nullptr;
+            void* function = nullptr;
+        };
+
+        struct OpaqueNativeSlider {
+            alignas(16) std::array<std::byte, kOpaqueNativeSliderStorageSize> storage = {};
+
+            void* Get() { return storage.data(); }
+            const void* Get() const { return storage.data(); }
+
+            void* GetKnobProxy() {
+                return reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderKnobProxyOffset);
+            }
+
+            const void* GetKnobProxy() const {
+                return reinterpret_cast<const void*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderKnobProxyOffset);
+            }
+
+            NativeSliderCallback& Callback() {
+                return *reinterpret_cast<NativeSliderCallback*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderCallbackOffset);
+            }
+
+            float& CurrentValue() {
+                return *reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderCurrentValueOffset);
+            }
+
+            std::uint8_t& EnabledFlag() {
+                return *reinterpret_cast<std::uint8_t*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderEnabledOffset);
+            }
+
+            float& MinValue() {
+                return *reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderMinValueOffset);
+            }
+
+            float& MaxValue() {
+                return *reinterpret_cast<float*>(reinterpret_cast<std::uintptr_t>(storage.data()) + kNativeSliderMaxValueOffset);
+            }
         };
 
         struct State {
@@ -322,6 +351,10 @@ namespace ConfigUi::Frontend {
             WidgetProxyForceActiveFn widgetProxyForceActive = nullptr;
             GenericWidgetCtorFn genericWidgetCtor = nullptr;
             GenericWidgetDtorFn genericWidgetDtor = nullptr;
+            CustomWidgetCtorFn customWidgetCtor = nullptr;
+            CustomWidgetDtorFn customWidgetDtor = nullptr;
+            ArtLabelCtorFn artLabelCtor = nullptr;
+            ArtLabelDtorFn artLabelDtor = nullptr;
             ButtonCtorFn buttonCtor = nullptr;
             ButtonDtorFn buttonDtor = nullptr;
             ButtonSetTextFn buttonSetText = nullptr;
@@ -330,16 +363,6 @@ namespace ConfigUi::Frontend {
             CheckButtonSetCheckedFn checkButtonSetChecked = nullptr;
             CheckButtonGetCheckedFn checkButtonGetChecked = nullptr;
             CheckButtonSetTextFn checkButtonSetText = nullptr;
-            ProgressBarCtorFn progressBarCtor = nullptr;
-            ProgressBarDtorFn progressBarDtor = nullptr;
-            ProgressBarSetProgressFn progressBarSetProgress = nullptr;
-            ProgressBarSetRangeFn progressBarSetRange = nullptr;
-            ProgressBarGetProgressFn progressBarGetProgress = nullptr;
-            ProgressBarSetTextureFn progressBarSetTexture = nullptr;
-            ProgressBarSetProgressBarTypeFn progressBarSetProgressBarType = nullptr;
-            ProgressBarSetStepSizeFn progressBarSetStepSize = nullptr;
-            ProgressBarIncrementFn progressBarIncrement = nullptr;
-            ProgressBarSetProgressColourFn progressBarSetProgressColour = nullptr;
             TextLabelCtorFn textLabelCtor = nullptr;
             TextLabelDtorFn textLabelDtor = nullptr;
             TextLabelSetTextFn textLabelSetText = nullptr;
@@ -367,6 +390,7 @@ namespace ConfigUi::Frontend {
             LocStringDtorFn locStringDtor = nullptr;
             void* addRenderChildAddress = nullptr;
             void* widgetFactoryCreateAddress = nullptr;
+            void* nativeSliderBindInputAddress = nullptr;
             bool fileOverrideRegistered = false;
             bool updateHookObserved = false;
             bool toggleKeyWasDown = false;
@@ -385,8 +409,10 @@ namespace ConfigUi::Frontend {
             std::array<void*, kVisibleRowCount> rowArrowButtonWidgets = {};
             // Bool widgets
             std::array<void*, kVisibleRowCount> rowCheckButtonWidgets = {};
-            // Int/Float widgets
-            std::array<void*, kVisibleRowCount> rowProgressBarWidgets = {};
+            // Int/Float slider widgets
+            std::array<void*, kVisibleRowCount> rowSliderWidgets = {};
+            std::array<void*, kVisibleRowCount> rowSliderButtonWidgets = {};
+            std::array<void*, kVisibleRowCount> rowSliderBarWidgets = {};
             OpaqueTextLabel titleLabel = {};
             OpaqueTextLabel summaryLabel = {};
             OpaqueTextLabel footerLabel = {};
@@ -396,12 +422,15 @@ namespace ConfigUi::Frontend {
             std::array<OpaqueButton, kVisibleRowCount> rowArrowButtons = {};
             // Bool proxies
             std::array<OpaqueCheckButton, kVisibleRowCount> rowCheckButtons = {};
-            // Int/Float proxies
-            std::array<OpaqueProgressBar, kVisibleRowCount> rowProgressBars = {};
+            // Int/Float slider proxies
+            std::array<OpaqueGenericWidget, kVisibleRowCount> rowSliders = {};
+            std::array<OpaqueNativeSlider, kVisibleRowCount> rowNativeSliders = {};
             // State tracking
             std::array<bool, kVisibleRowCount> rowArrowButtonWasActive = {};
             std::array<bool, kVisibleRowCount> rowCheckButtonWasActive = {};
-            std::array<bool, kVisibleRowCount> rowProgressBarWasActive = {};
+            std::array<bool, kVisibleRowCount> rowNativeSliderInitialized = {};
+            std::array<float, kVisibleRowCount> rowObservedSliderProgress = {};
+            std::array<bool, kVisibleRowCount> rowHasObservedSliderProgress = {};
             std::array<long, kVisibleRowCount> rowObservedListBoxSelection = {};
             std::array<bool, kVisibleRowCount> rowHasObservedListBoxSelection = {};
             std::array<CoHModSDKConfigType, kVisibleRowCount> rowActiveControlType = {};
@@ -421,6 +450,9 @@ namespace ConfigUi::Frontend {
 
         bool RefreshVisibleMenu(State& state);
         std::size_t ComputeFirstVisibleIndex(State& state);
+#if defined(_M_IX86)
+        void __cdecl CallWithEaxContext0(void* eaxContext, void* targetFn);
+#endif
 
         void LogInfo(const std::string& message) {
             ModSDK::Runtime::Log(CoHModSDKLogLevel_Info, message.c_str());
@@ -799,6 +831,10 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?ForceActive@WidgetProxy@UI@@UAEX_N@Z", state.widgetProxyForceActive) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0GenericWidget@UI@@QAE@XZ", state.genericWidgetCtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1GenericWidget@UI@@UAE@XZ", state.genericWidgetDtor) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0CustomWidget@UI@@QAE@XZ", state.customWidgetCtor) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1CustomWidget@UI@@UAE@XZ", state.customWidgetDtor) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0ArtLabel@UI@@QAE@XZ", state.artLabelCtor) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1ArtLabel@UI@@UAE@XZ", state.artLabelDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0Button@UI@@QAE@XZ", state.buttonCtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1Button@UI@@UAE@XZ", state.buttonDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetText@Button@UI@@QAEXABVLocString@@@Z", state.buttonSetText) &&
@@ -806,10 +842,6 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1CheckButton@UI@@UAE@XZ", state.checkButtonDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetChecked@CheckButton@UI@@QAEX_N@Z", state.checkButtonSetChecked) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetChecked@CheckButton@UI@@QBE_NXZ", state.checkButtonGetChecked) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0ProgressBar@UI@@QAE@XZ", state.progressBarCtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1ProgressBar@UI@@UAE@XZ", state.progressBarDtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetProgress@ProgressBar@UI@@QAEXM@Z", state.progressBarSetProgress) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetRange@ProgressBar@UI@@QAEXMM@Z", state.progressBarSetRange) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0TextLabel@UI@@QAE@XZ", state.textLabelCtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1TextLabel@UI@@UAE@XZ", state.textLabelDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetText@TextLabel@UI@@QAEXABVLocString@@@Z", state.textLabelSetText) &&
@@ -832,6 +864,14 @@ namespace ConfigUi::Frontend {
             state.findWidgetByName = reinterpret_cast<FindWidgetByNameFn>(userInterfaceBase + kFindWidgetByNameRva);
             state.addRenderChildAddress = reinterpret_cast<void*>(userInterfaceBase + kAddRenderChildRva);
             state.widgetFactoryCreateAddress = reinterpret_cast<void*>(userInterfaceBase + kWidgetFactoryCreateRva);
+            HMODULE gameModule = GetModuleHandleA(kGameExecutableModuleName);
+            if (gameModule == nullptr) {
+                gameModule = GetModuleHandleA(nullptr);
+            }
+            state.nativeSliderBindInputAddress =
+                gameModule == nullptr
+                ? nullptr
+                : reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(gameModule) + kNativeSliderBindInputRva);
 
             ResolveOptionalExport(
                 userInterfaceModule,
@@ -854,13 +894,7 @@ namespace ConfigUi::Frontend {
             ResolveOptionalExport(userInterfaceModule, "?GetOldCustomItem@CustomListBox@UI@@QAEPAVCustomListBoxItemOld@2@XZ", state.customListBoxGetOldCustomItem);
             ResolveOptionalExport(userInterfaceModule, "?Bind@CustomListBoxItemOld@UI@@QAEXABVWidgetProxy@2@PBDJ@Z", state.customListBoxItemOldBind);
             ResolveOptionalExport(userInterfaceModule, "?SetText@CustomListBoxItemOld@UI@@QAEXABVLocString@@@Z", state.customListBoxItemOldSetText);
-            ResolveOptionalExport(userInterfaceModule, "?GetProgress@ProgressBar@UI@@QBEMXZ", state.progressBarGetProgress);
             ResolveOptionalExport(userInterfaceModule, "?GetStyleManager@ScreenManager@UI@@QAEPAVStyleManager@2@XZ", state.getStyleManager);
-            ResolveOptionalExport(userInterfaceModule, "?SetTexture@ProgressBar@UI@@QAEXPBD@Z", state.progressBarSetTexture);
-            ResolveOptionalExport(userInterfaceModule, "?SetProgressBarType@ProgressBar@UI@@QAEX_N@Z", state.progressBarSetProgressBarType);
-            ResolveOptionalExport(userInterfaceModule, "?SetStepSize@ProgressBar@UI@@QAEXM@Z", state.progressBarSetStepSize);
-            ResolveOptionalExport(userInterfaceModule, "?Increment@ProgressBar@UI@@QAEXJ@Z", state.progressBarIncrement);
-            ResolveOptionalExport(userInterfaceModule, "?SetProgressColour@ProgressBar@UI@@QAEXABVColour@MathPrim@@@Z", state.progressBarSetProgressColour);
             return true;
         }
 
@@ -1053,6 +1087,18 @@ namespace ConfigUi::Frontend {
             return std::string(kRowCheckButtonNamePrefix) + std::to_string(rowIndex);
         }
 
+        std::string MakeRowSliderName(std::size_t rowIndex) {
+            return std::string(kRowSliderNamePrefix) + std::to_string(rowIndex);
+        }
+
+        std::string MakeRowSliderButtonName(std::size_t rowIndex) {
+            return std::string("slider_bttn_") + MakeRowSliderName(rowIndex);
+        }
+
+        std::string MakeRowSliderBarName(std::size_t rowIndex) {
+            return std::string("slider_bar_") + MakeRowSliderName(rowIndex);
+        }
+
         std::string ReadWidgetNameForLog(const void* rawWidget) {
             if (rawWidget == nullptr) {
                 return "<null>";
@@ -1084,7 +1130,12 @@ namespace ConfigUi::Frontend {
             state.rowValueLabelWidgets.fill(nullptr);
             state.rowArrowButtonWidgets.fill(nullptr);
             state.rowCheckButtonWidgets.fill(nullptr);
-            state.rowProgressBarWidgets.fill(nullptr);
+            state.rowSliderWidgets.fill(nullptr);
+            state.rowSliderButtonWidgets.fill(nullptr);
+            state.rowSliderBarWidgets.fill(nullptr);
+            state.rowNativeSliderInitialized.fill(false);
+            state.rowObservedSliderProgress.fill(0.0f);
+            state.rowHasObservedSliderProgress.fill(false);
             state.rowObservedListBoxSelection.fill(-1);
             state.rowHasObservedListBoxSelection.fill(false);
             state.rowActiveControlType.fill(CoHModSDKConfigType_Bool);
@@ -1158,13 +1209,13 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
-        bool BindProgressBarProxy(State& state, OpaqueProgressBar& progressBar, void* rawWidget) {
-            if ((rawWidget == nullptr) || (state.progressBarCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
+        bool BindGenericWidgetProxy(State& state, OpaqueGenericWidget& genericWidget, void* rawWidget) {
+            if ((rawWidget == nullptr) || (state.genericWidgetCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
                 return false;
             }
 
-            state.progressBarCtor(progressBar.Get());
-            state.widgetProxyBind(progressBar.Get(), rawWidget);
+            state.genericWidgetCtor(genericWidget.Get());
+            state.widgetProxyBind(genericWidget.Get(), rawWidget);
             return true;
         }
 
@@ -1764,8 +1815,141 @@ namespace ConfigUi::Frontend {
                 std::to_string(listBoxSizeY) +
                 " with scrollbar " +
                 (needsScrollBar ? std::string("visible") : std::string("hidden")) +
-                "."
+                "." 
             );
+        }
+
+        float ComputeNumericOptionProgress(const OptionEntry& optionEntry) {
+            if (optionEntry.minValue >= optionEntry.maxValue) {
+                return 0.0f;
+            }
+
+            switch (optionEntry.type) {
+            case CoHModSDKConfigType_Int: {
+                const float minValue = static_cast<float>(static_cast<std::int32_t>(std::lround(optionEntry.minValue)));
+                const float maxValue = static_cast<float>(static_cast<std::int32_t>(std::lround(optionEntry.maxValue)));
+                if (maxValue <= minValue) {
+                    return 0.0f;
+                }
+
+                return std::clamp(
+                    (static_cast<float>(optionEntry.currentValue.intValue) - minValue) / (maxValue - minValue),
+                    0.0f,
+                    1.0f
+                );
+            }
+
+            case CoHModSDKConfigType_Float:
+                return std::clamp(
+                    (optionEntry.currentValue.floatValue - optionEntry.minValue) / (optionEntry.maxValue - optionEntry.minValue),
+                    0.0f,
+                    1.0f
+                );
+
+            default:
+                return 0.0f;
+            }
+        }
+
+        void ConfigureRowSliderProgress(State& state, std::size_t rowIndex, float progress) {
+            if ((rowIndex >= kVisibleRowCount) ||
+                (state.rowSliderWidgets[rowIndex] == nullptr) ||
+                (state.rowSliderButtonWidgets[rowIndex] == nullptr) ||
+                (state.widgetSetPosition == nullptr)) {
+                return;
+            }
+
+            const float clampedProgress = std::clamp(progress, 0.0f, 1.0f);
+            const float buttonPositionX =
+                kRowSliderButtonMinPositionX +
+                ((kRowSliderButtonMaxPositionX - kRowSliderButtonMinPositionX) * clampedProgress);
+
+            state.widgetSetPosition(
+                state.rowSliderButtonWidgets[rowIndex],
+                buttonPositionX,
+                kRowSliderButtonPositionY
+            );
+        }
+
+        void SetNativeRowSliderProgress(State& state, std::size_t rowIndex, float progress) {
+            if ((rowIndex >= kVisibleRowCount) || !state.rowNativeSliderInitialized[rowIndex]) {
+                return;
+            }
+
+            const float clampedProgress = std::clamp(progress, 0.0f, 1.0f);
+            state.rowNativeSliders[rowIndex].CurrentValue() = clampedProgress;
+            ConfigureRowSliderProgress(state, rowIndex, clampedProgress);
+            state.rowObservedSliderProgress[rowIndex] = clampedProgress;
+            state.rowHasObservedSliderProgress[rowIndex] = true;
+        }
+
+        bool BindNativeRowSliderInput(State& state, OpaqueNativeSlider& nativeSlider) {
+            if (state.nativeSliderBindInputAddress == nullptr) {
+                return false;
+            }
+
+#if defined(_M_IX86)
+            CallWithEaxContext0(nativeSlider.Get(), state.nativeSliderBindInputAddress);
+            return true;
+#else
+            (void)state;
+            (void)nativeSlider;
+            return false;
+#endif
+        }
+
+        bool InitializeNativeRowSlider(State& state, std::size_t rowIndex) {
+            if ((rowIndex >= kVisibleRowCount) ||
+                (state.customWidgetCtor == nullptr) ||
+                (state.customWidgetDtor == nullptr) ||
+                (state.artLabelCtor == nullptr) ||
+                (state.artLabelDtor == nullptr) ||
+                (state.widgetProxyBind == nullptr) ||
+                (state.rowSliderBarWidgets[rowIndex] == nullptr) ||
+                (state.rowSliderButtonWidgets[rowIndex] == nullptr)) {
+                return false;
+            }
+
+            OpaqueNativeSlider& nativeSlider = state.rowNativeSliders[rowIndex];
+            nativeSlider.storage.fill(std::byte { 0 });
+            state.customWidgetCtor(nativeSlider.Get());
+            state.artLabelCtor(nativeSlider.GetKnobProxy());
+            state.widgetProxyBind(nativeSlider.Get(), state.rowSliderBarWidgets[rowIndex]);
+            state.widgetProxyBind(nativeSlider.GetKnobProxy(), state.rowSliderButtonWidgets[rowIndex]);
+            nativeSlider.Callback() = {};
+            nativeSlider.CurrentValue() = 0.0f;
+            nativeSlider.EnabledFlag() = 1u;
+            nativeSlider.MinValue() = 0.0f;
+            nativeSlider.MaxValue() = 1.0f;
+
+            if (!BindNativeRowSliderInput(state, nativeSlider)) {
+                state.artLabelDtor(nativeSlider.GetKnobProxy());
+                state.customWidgetDtor(nativeSlider.Get());
+                nativeSlider.storage.fill(std::byte { 0 });
+                return false;
+            }
+
+            state.rowNativeSliderInitialized[rowIndex] = true;
+            state.rowObservedSliderProgress[rowIndex] = 0.0f;
+            state.rowHasObservedSliderProgress[rowIndex] = false;
+            LogInfo("CoH Mod Config UI: Initialized native slider controller for row " + std::to_string(rowIndex) + ".");
+            return true;
+        }
+
+        void DestroyNativeRowSlider(State& state, std::size_t rowIndex) {
+            if ((rowIndex >= kVisibleRowCount) ||
+                !state.rowNativeSliderInitialized[rowIndex] ||
+                (state.customWidgetDtor == nullptr) ||
+                (state.artLabelDtor == nullptr)) {
+                return;
+            }
+
+            state.artLabelDtor(state.rowNativeSliders[rowIndex].GetKnobProxy());
+            state.customWidgetDtor(state.rowNativeSliders[rowIndex].Get());
+            state.rowNativeSliders[rowIndex].storage.fill(std::byte { 0 });
+            state.rowNativeSliderInitialized[rowIndex] = false;
+            state.rowObservedSliderProgress[rowIndex] = 0.0f;
+            state.rowHasObservedSliderProgress[rowIndex] = false;
         }
 
         bool TryGetCustomListBoxSelectedIndex(State& state, void* listBoxWidget, long& outSelectedIndex) {
@@ -1946,62 +2130,6 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
-        // Transfer Presentation from donor ProgressBar's internal Progress child to target's child.
-        // ProgressBar widgets have an extension (ID 14) at offset +8 pointing to the Progress fill child.
-        bool TransferProgressBarChildPresentation(State& state, void* targetProgressBar, const char* donorScreenName, const char* donorWidgetName) {
-            if ((targetProgressBar == nullptr) || (state.findWidgetExtension == nullptr) ||
-                (state.widgetGetPresentation == nullptr) || (state.widgetSetPresentation == nullptr)) {
-                return false;
-            }
-
-            // Find donor ProgressBar raw widget via proxy bind.
-            OpaqueGenericWidget donorProxy = {};
-            state.genericWidgetCtor(donorProxy.Get());
-            const auto cleanup = [&]() { state.genericWidgetDtor(donorProxy.Get()); };
-
-            state.widgetProxyBindByName(donorProxy.Get(), donorScreenName, donorWidgetName);
-            if (!state.widgetProxyIsValid(donorProxy.Get())) {
-                cleanup();
-                return false;
-            }
-
-            void* donorRawWidget = state.widgetProxyGetWidget(donorProxy.Get());
-            if (donorRawWidget == nullptr) { cleanup(); return false; }
-
-            // Get extension 14 from both widgets to access Progress children.
-            void* donorExt = state.findWidgetExtension(donorRawWidget, kProgressChildExtensionId);
-            void* targetExt = state.findWidgetExtension(targetProgressBar, kProgressChildExtensionId);
-            if ((donorExt == nullptr) || (targetExt == nullptr)) {
-                LogWarning("CoH Mod Config UI: ProgressBar missing extension 14 (donor=" +
-                    std::to_string(donorExt != nullptr) + ", target=" + std::to_string(targetExt != nullptr) + ").");
-                cleanup();
-                return false;
-            }
-
-            // Extension 14, offset +8 = Progress child widget pointer.
-            void* donorChild = *reinterpret_cast<void**>(reinterpret_cast<std::uintptr_t>(donorExt) + 8u);
-            void* targetChild = *reinterpret_cast<void**>(reinterpret_cast<std::uintptr_t>(targetExt) + 8u);
-            if ((donorChild == nullptr) || (targetChild == nullptr)) {
-                LogWarning("CoH Mod Config UI: ProgressBar Progress child is null.");
-                cleanup();
-                return false;
-            }
-
-            void* childPresentation = state.widgetGetPresentation(donorChild);
-            if (childPresentation == nullptr) {
-                LogWarning("CoH Mod Config UI: donor Progress child has null Presentation.");
-                cleanup();
-                return false;
-            }
-
-            state.widgetSetPresentation(targetChild, childPresentation);
-            LogInfo("CoH Mod Config UI: transferred Progress child Presentation (addr=" +
-                std::to_string(reinterpret_cast<std::uintptr_t>(childPresentation)) + ").");
-
-            cleanup();
-            return true;
-        }
-
         // Direct presentation transfer using screen pointer + internal widget search.
         // Recursively search a widget tree for a widget by name.
         // Uses only findWidgetExtension (exported) and raw memory layout from RE:
@@ -2106,6 +2234,21 @@ namespace ConfigUi::Frontend {
         }
 
 #if defined(_M_IX86)
+        __declspec(naked) void __cdecl CallWithEaxContext0(void* /*eaxContext*/, void* /*targetFn*/) {
+            __asm {
+                push esi
+                push edi
+                push ebx
+                mov eax, [esp + 16]
+                mov ecx, [esp + 20]
+                call ecx
+                pop ebx
+                pop edi
+                pop esi
+                ret
+            }
+        }
+
         // Naked trampoline: calls a game function that expects EAX as an implicit context parameter.
         // Stack layout at entry: [esp+4]=eaxContext, [esp+8]=targetFn, [esp+12]=arg1
         // Returns the game function's EAX result. Preserves ESI/EDI/EBX.
@@ -2527,13 +2670,96 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Row bool CheckButton widgets resolved from the active screen.");
 
-            // Step 12: Create native ComboBox widgets for enum rows and resolve their child widgets.
+            // Step 12: Resolve native slider widgets preloaded by cohmodconfigui.screen for int/float rows.
+            for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
+                const std::string rowSliderName = MakeRowSliderName(i);
+                const std::string rowSliderButtonName = MakeRowSliderButtonName(i);
+                const std::string rowSliderBarName = MakeRowSliderBarName(i);
+
+                state.rowSliderWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowSliderName.c_str(), 0);
+                if (state.rowSliderWidgets[i] == nullptr) {
+                    state.rowSliderWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowSliderName.c_str(), 1);
+                    if (state.rowSliderWidgets[i] == nullptr) {
+                        LogError("CoH Mod Config UI: Failed to resolve preloaded slider widget '" + rowSliderName + "' for row " + std::to_string(i) + ".");
+                        return false;
+                    }
+                }
+
+                state.rowSliderButtonWidgets[i] = FindNamedWidget(state, state.rowSliderWidgets[i], rowSliderButtonName.c_str());
+                state.rowSliderBarWidgets[i] = FindNamedWidget(state, state.rowSliderWidgets[i], rowSliderBarName.c_str());
+                if ((state.rowSliderButtonWidgets[i] == nullptr) || (state.rowSliderBarWidgets[i] == nullptr)) {
+                    LogError(
+                        "CoH Mod Config UI: Failed to resolve slider child widgets for row " +
+                        std::to_string(i) +
+                        " (button='" + rowSliderButtonName +
+                        "', bar='" + rowSliderBarName + "')."
+                    );
+                    return false;
+                }
+
+                if (!RemoveRenderChild(state, state.rootWidgetRaw, state.rowSliderWidgets[i])) {
+                    LogError("CoH Mod Config UI: Failed to remove preloaded slider widget '" + rowSliderName + "' from the root render tree for row " + std::to_string(i) + ".");
+                    return false;
+                }
+
+                ConfigureRawWidget(
+                    state,
+                    state.rowSliderWidgets[i],
+                    rowSliderName.c_str(),
+                    kRowControlPositionX,
+                    kFirstRowPositionY + (static_cast<float>(i) * kRowSpacingY) + kRowSliderOffsetY,
+                    kRowSliderSizeX,
+                    kRowSliderSizeY,
+                    state.panelWidgetRaw
+                );
+                ConfigureRawWidget(
+                    state,
+                    state.rowSliderButtonWidgets[i],
+                    rowSliderButtonName.c_str(),
+                    kRowSliderButtonMinPositionX,
+                    kRowSliderButtonPositionY,
+                    kRowSliderButtonSizeX,
+                    kRowSliderButtonSizeY,
+                    state.rowSliderWidgets[i]
+                );
+                ConfigureRawWidget(
+                    state,
+                    state.rowSliderBarWidgets[i],
+                    rowSliderBarName.c_str(),
+                    0.0f,
+                    0.0f,
+                    kRowSliderSizeX,
+                    kRowSliderSizeY,
+                    state.rowSliderWidgets[i]
+                );
+
+                if (!AttachRenderChild(state, state.panelWidgetRaw, state.rowSliderWidgets[i])) {
+                    LogError("CoH Mod Config UI: Failed to attach preloaded slider widget '" + rowSliderName + "' to the panel render tree for row " + std::to_string(i) + ".");
+                    return false;
+                }
+
+                SetRawWidgetVisible(state, state.rowSliderWidgets[i], false);
+                if (!InitializeNativeRowSlider(state, i)) {
+                    LogError("CoH Mod Config UI: Failed to initialize native slider controller for row " + std::to_string(i) + ".");
+                    return false;
+                }
+                LogInfo(
+                    "CoH Mod Config UI: Resolved, moved, and attached preloaded slider widget '" +
+                    rowSliderName +
+                    "' for row " +
+                    std::to_string(i) +
+                    "."
+                );
+            }
+            LogInfo("CoH Mod Config UI: Row numeric slider widgets resolved from the active screen.");
+
             void* optionsMenuDonorScreen = nullptr;
             if (!EnsureDonorScreenLoaded(state, optionsMenuDonorScreen, kOptionsmenuDonorScreenName)) {
-                LogError("CoH Mod Config UI: Failed to load donor screen '" + std::string(kOptionsmenuDonorScreenName) + "' for native ComboBox widgets.");
+                LogError("CoH Mod Config UI: Failed to load donor screen '" + std::string(kOptionsmenuDonorScreenName) + "' for enum row widgets.");
                 return false;
             }
 
+            // Step 13: Create native ComboBox widgets for enum rows and resolve their child widgets.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 state.rowComboBoxWidgets[i] = CreateRawWidgetByType(state, kComboBoxWidgetTypeName);
                 if (state.rowComboBoxWidgets[i] == nullptr) {
@@ -2755,7 +2981,7 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Native row ComboBox widgets created, attached, and child widgets resolved.");
 
-            // Step 13: Construct and bind title, summary, footer, row label, bool, and enum proxies.
+            // Step 14: Construct and bind title, summary, footer, row label, bool, numeric, and enum proxies.
             state.textLabelCtor(state.titleLabel.Get());
             state.widgetProxyBind(state.titleLabel.Get(), state.titleLabelRaw);
             ApplyWidgetProxyState(state, state.titleLabel.Get());
@@ -2802,12 +3028,16 @@ namespace ConfigUi::Frontend {
                     LogWarning("CoH Mod Config UI: Failed to blank CheckButton text for row " + std::to_string(i) + ".");
                 }
 
-                state.progressBarCtor(state.rowProgressBars[i].Get());
+                if (!BindGenericWidgetProxy(state, state.rowSliders[i], state.rowSliderWidgets[i])) {
+                    LogError("CoH Mod Config UI: Failed to bind slider proxy for row " + std::to_string(i) + ".");
+                    return false;
+                }
+                ApplyWidgetProxyState(state, state.rowSliders[i].Get());
             }
             LogInfo("CoH Mod Config UI: All proxy objects constructed.");
 
             state.overlayBuilt = true;
-            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + summary + footer + row labels + row CheckButtons + native enum ComboBox child binding milestone).");
+            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + summary + footer + row labels + row CheckButtons + row Sliders + native enum ComboBox child binding milestone).");
             return true;
         }
 
@@ -2818,7 +3048,8 @@ namespace ConfigUi::Frontend {
 
             if (state.overlayBuilt) {
                 for (std::size_t i = kVisibleRowCount; i > 0u; --i) {
-                    state.progressBarDtor(state.rowProgressBars[i - 1u].Get());
+                    DestroyNativeRowSlider(state, i - 1u);
+                    state.genericWidgetDtor(state.rowSliders[i - 1u].Get());
                     state.checkButtonDtor(state.rowCheckButtons[i - 1u].Get());
                     state.buttonDtor(state.rowArrowButtons[i - 1u].Get());
                     state.textLabelDtor(state.rowValueLabels[i - 1u].Get());
@@ -2847,14 +3078,16 @@ namespace ConfigUi::Frontend {
                 state.widgetProxySetVisible(state.rowValueLabels[rowIndex].Get(), false);
                 state.widgetProxySetVisible(state.rowArrowButtons[rowIndex].Get(), false);
                 state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowProgressBars[rowIndex].Get(), false);
+                state.widgetProxySetVisible(state.rowSliders[rowIndex].Get(), false);
             }
             SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], false);
-            SetRawWidgetVisible(state, state.rowProgressBarWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowSliderWidgets[rowIndex], false);
             state.rowObservedListBoxSelection[rowIndex] = -1;
             state.rowHasObservedListBoxSelection[rowIndex] = false;
+            state.rowObservedSliderProgress[rowIndex] = 0.0f;
+            state.rowHasObservedSliderProgress[rowIndex] = false;
             state.rowActiveControlType[rowIndex] = CoHModSDKConfigType_Bool;
         }
 
@@ -2870,12 +3103,12 @@ namespace ConfigUi::Frontend {
                 state.widgetProxySetVisible(state.rowValueLabels[rowIndex].Get(), false);
                 state.widgetProxySetVisible(state.rowArrowButtons[rowIndex].Get(), false);
                 state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowProgressBars[rowIndex].Get(), false);
+                state.widgetProxySetVisible(state.rowSliders[rowIndex].Get(), false);
             }
             SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], false);
-            SetRawWidgetVisible(state, state.rowProgressBarWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowSliderWidgets[rowIndex], false);
 
             switch (opt.type) {
             case CoHModSDKConfigType_Bool:
@@ -2891,23 +3124,12 @@ namespace ConfigUi::Frontend {
 
             case CoHModSDKConfigType_Int:
             case CoHModSDKConfigType_Float: {
-                // Show progress bar as a slider.
-                float progress = 0.0f;
-                if (opt.minValue < opt.maxValue) {
-                    if (opt.type == CoHModSDKConfigType_Int) {
-                        progress = static_cast<float>(opt.currentValue.intValue - static_cast<std::int32_t>(std::lround(opt.minValue))) /
-                            static_cast<float>(static_cast<std::int32_t>(std::lround(opt.maxValue)) - static_cast<std::int32_t>(std::lround(opt.minValue)));
-                    }
-                    else {
-                        progress = (opt.currentValue.floatValue - opt.minValue) / (opt.maxValue - opt.minValue);
-                    }
-                    progress = std::clamp(progress, 0.0f, 1.0f);
-                }
-                state.progressBarSetRange(state.rowProgressBars[rowIndex].Get(), 0.0f, 1.0f);
-                state.progressBarSetProgress(state.rowProgressBars[rowIndex].Get(), progress);
-                SetRawWidgetVisible(state, state.rowProgressBarWidgets[rowIndex], true);
+                // Show native slider-style control for numeric values.
+                const float progress = ComputeNumericOptionProgress(opt);
+                SetNativeRowSliderProgress(state, rowIndex, progress);
+                SetRawWidgetVisible(state, state.rowSliderWidgets[rowIndex], true);
                 if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.rowProgressBars[rowIndex].Get(), true);
+                    state.widgetProxySetVisible(state.rowSliders[rowIndex].Get(), true);
                 }
                 break;
             }
@@ -3168,6 +3390,101 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
+        bool TryApplyNumericRowSliderChange(State& state, std::size_t rowIndex, float normalizedProgress) {
+            if (state.catalog == nullptr) {
+                return false;
+            }
+
+            SelectedOptionRef rowOption = {};
+            if (!TryGetVisibleRowOption(state, rowIndex, rowOption) ||
+                (rowOption.modEntry == nullptr) ||
+                (rowOption.optionEntry == nullptr)) {
+                return false;
+            }
+
+            OptionEntry& optionEntry = *rowOption.optionEntry;
+            if ((optionEntry.type != CoHModSDKConfigType_Int) && (optionEntry.type != CoHModSDKConfigType_Float)) {
+                return false;
+            }
+
+            if (optionEntry.minValue >= optionEntry.maxValue) {
+                return false;
+            }
+
+            const float clampedProgress = std::clamp(normalizedProgress, 0.0f, 1.0f);
+            ModSDK::Config::Value newValue = optionEntry.currentValue;
+            float appliedProgress = clampedProgress;
+
+            if (optionEntry.type == CoHModSDKConfigType_Int) {
+                const std::int32_t minValue = static_cast<std::int32_t>(std::lround(optionEntry.minValue));
+                const std::int32_t maxValue = static_cast<std::int32_t>(std::lround(optionEntry.maxValue));
+                const std::int32_t stepValue = (std::max)(1, static_cast<std::int32_t>(std::lround(optionEntry.step > 0.0f ? optionEntry.step : 1.0f)));
+                const float scaledValue = static_cast<float>(minValue) + (clampedProgress * static_cast<float>(maxValue - minValue));
+                std::int32_t candidateValue = minValue + (static_cast<std::int32_t>(std::lround((scaledValue - static_cast<float>(minValue)) / static_cast<float>(stepValue))) * stepValue);
+                candidateValue = std::clamp(candidateValue, minValue, maxValue);
+                newValue = ModSDK::Config::MakeIntValue(candidateValue);
+                if (maxValue > minValue) {
+                    appliedProgress = std::clamp(
+                        (static_cast<float>(candidateValue) - static_cast<float>(minValue)) /
+                        static_cast<float>(maxValue - minValue),
+                        0.0f,
+                        1.0f
+                    );
+                }
+            }
+            else {
+                const float stepValue = optionEntry.step > 0.0f ? optionEntry.step : 0.0f;
+                float candidateValue = optionEntry.minValue + (clampedProgress * (optionEntry.maxValue - optionEntry.minValue));
+                if (stepValue > 0.0f) {
+                    candidateValue = optionEntry.minValue + (std::round((candidateValue - optionEntry.minValue) / stepValue) * stepValue);
+                }
+                candidateValue = std::clamp(candidateValue, optionEntry.minValue, optionEntry.maxValue);
+                newValue = ModSDK::Config::MakeFloatValue(candidateValue);
+                appliedProgress = std::clamp(
+                    (candidateValue - optionEntry.minValue) / (optionEntry.maxValue - optionEntry.minValue),
+                    0.0f,
+                    1.0f
+                );
+            }
+
+            const bool valueChanged =
+                ((optionEntry.type == CoHModSDKConfigType_Int) && (newValue.intValue != optionEntry.currentValue.intValue)) ||
+                ((optionEntry.type == CoHModSDKConfigType_Float) && (std::fabs(newValue.floatValue - optionEntry.currentValue.floatValue) > kSliderProgressEpsilon));
+
+            SetNativeRowSliderProgress(state, rowIndex, appliedProgress);
+            state.selectedOptionIndex = rowOption.flatIndex;
+            TrySetTextLabel(state, state.titleLabel, BuildTitleText(&rowOption), false);
+            TrySetTextLabel(state, state.summaryLabel, BuildSummaryText(rowOption), true);
+            TrySetTextLabel(state, state.footerLabel, BuildFooterText(), false);
+
+            if (!valueChanged) {
+                return false;
+            }
+
+            if (!ModSDK::Config::SetValue(rowOption.modEntry->modId.c_str(), optionEntry.optionId.c_str(), newValue)) {
+                LogWarning(
+                    "CoH Mod Config UI failed to update numeric value for " +
+                    rowOption.modEntry->modId +
+                    "." +
+                    optionEntry.optionId +
+                    " via native slider."
+                );
+                return false;
+            }
+
+            optionEntry.currentValue = newValue;
+            LogInfo(
+                "CoH Mod Config UI: Native slider value changed for row " +
+                std::to_string(rowIndex) +
+                " to normalized progress " +
+                std::to_string(appliedProgress) +
+                " ('" +
+                FormatCurrentValue(optionEntry) +
+                "')."
+            );
+            return true;
+        }
+
         std::size_t ComputeFirstVisibleIndex(State& state) {
             SelectedOptionRef selectedOption = {};
             if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
@@ -3258,8 +3575,19 @@ namespace ConfigUi::Frontend {
                 if (PollWidgetActiveEdge(state, state.rowCheckButtons[i].Get(), state.rowCheckButtonWasActive[i])) {
                     OnRowControlClicked(state, i);
                 }
-                if (PollWidgetActiveEdge(state, state.rowProgressBars[i].Get(), state.rowProgressBarWasActive[i])) {
-                    OnRowControlClicked(state, i);
+                if (((state.rowActiveControlType[i] == CoHModSDKConfigType_Int) ||
+                    (state.rowActiveControlType[i] == CoHModSDKConfigType_Float)) &&
+                    state.rowNativeSliderInitialized[i]) {
+                    const float currentProgress = std::clamp(state.rowNativeSliders[i].CurrentValue(), 0.0f, 1.0f);
+                    if (!state.rowHasObservedSliderProgress[i]) {
+                        state.rowObservedSliderProgress[i] = currentProgress;
+                        state.rowHasObservedSliderProgress[i] = true;
+                    }
+                    else if (std::fabs(currentProgress - state.rowObservedSliderProgress[i]) > kSliderProgressEpsilon) {
+                        if (TryApplyNumericRowSliderChange(state, i, currentProgress)) {
+                            return;
+                        }
+                    }
                 }
                 if ((state.rowActiveControlType[i] == CoHModSDKConfigType_Enum) && (state.rowListBoxWidgets[i] != nullptr)) {
                     long selectedIndex = -1;
