@@ -60,8 +60,16 @@ namespace ConfigUi::Frontend {
         constexpr char kRowButtonNamePrefix[] = "cohmodconfigui_row_";
         constexpr char kRowCheckButtonNamePrefix[] = "cohmodconfigui_rowcheck_";
         constexpr char kRowProgressBarNamePrefix[] = "cohmodconfigui_rowprog_";
+        // Keep the options-menu radio-button donor recorded for later investigation.
+        constexpr char kReferenceRadioButtonDonorScreenName[] = "optionsmenu";
+        constexpr char kReferenceRadioButtonDonorWidgetName[] = "rdo_graphics_custom";
         constexpr char kCheckButtonDonorScreenName[] = "messageboxpopup2";
         constexpr char kCheckButtonDonorWidgetName[] = "checkbutton_ShowOnce";
+        // Keep the skirmish ready donor recorded as a fallback reference.
+        constexpr char kReferenceCheckButtonDonorScreenName[] = "skirmishmissionsetup";
+        constexpr char kReferenceCheckButtonDonorWidgetName[] = "btnReady";
+        constexpr char kDefaultStyleSetName[] = "DefaultStyles";
+        constexpr char kDefaultCheckButtonStyleName[] = "defStyleCheckBox";
         constexpr char kProgressBarDonorScreenName[] = "optionsmenu";
         constexpr char kProgressBarDonorWidgetName[] = "progress_memory_used";
         constexpr char kOptionsmenuDonorScreenName[] = "optionsmenu";
@@ -130,8 +138,10 @@ namespace ConfigUi::Frontend {
         constexpr float kDropdownItemLabelPositionY = 0.0f;
         constexpr float kDropdownItemLabelSizeX = 0.96f;
         constexpr float kDropdownItemLabelSizeY = 1.0f;
-        constexpr float kRowCheckButtonSizeX = 0.035f;
-        constexpr float kRowCheckButtonSizeY = 0.035f;
+        constexpr float kReferenceRadioButtonSizeX = 0.21809f;
+        constexpr float kReferenceRadioButtonSizeY = 0.05085f;
+        constexpr float kRowCheckButtonSizeX = 0.18750f;
+        constexpr float kRowCheckButtonSizeY = 0.04167f;
         constexpr float kRowProgressBarSizeX = 0.18f;
         constexpr float kRowProgressBarSizeY = 0.030f;
 
@@ -1039,6 +1049,10 @@ namespace ConfigUi::Frontend {
             return std::string("cohmodconfigui_rowval_") + std::to_string(rowIndex);
         }
 
+        std::string MakeRowCheckButtonName(std::size_t rowIndex) {
+            return std::string(kRowCheckButtonNamePrefix) + std::to_string(rowIndex);
+        }
+
         std::string ReadWidgetNameForLog(const void* rawWidget) {
             if (rawWidget == nullptr) {
                 return "<null>";
@@ -1805,6 +1819,36 @@ namespace ConfigUi::Frontend {
             return AddRenderChild(state, parentRenderObject, childWidget);
         }
 
+        bool RemoveRenderChild(State& state, void* parentWidget, void* childWidget) {
+            void* const parentRenderObject = FindWidgetExtensionObject(state, parentWidget, kDrawChildrenExtensionId);
+            if ((parentRenderObject == nullptr) || (childWidget == nullptr)) {
+                return false;
+            }
+
+            const std::uintptr_t renderObjectAddress = reinterpret_cast<std::uintptr_t>(parentRenderObject);
+            void** children = *reinterpret_cast<void***>(renderObjectAddress + 0x1Cu);
+            unsigned int& count = *reinterpret_cast<unsigned int*>(renderObjectAddress + 0x20u);
+            if ((children == nullptr) || (count == 0u)) {
+                return false;
+            }
+
+            for (unsigned int index = 0u; index < count; ++index) {
+                if (children[index] != childWidget) {
+                    continue;
+                }
+
+                for (unsigned int shiftIndex = index + 1u; shiftIndex < count; ++shiftIndex) {
+                    children[shiftIndex - 1u] = children[shiftIndex];
+                }
+
+                children[count - 1u] = nullptr;
+                --count;
+                return true;
+            }
+
+            return false;
+        }
+
         bool EnsureDonorScreenLoaded(State& state, void*& screenSlot, const char* screenName) {
             if (screenSlot != nullptr) {
                 return true;
@@ -2207,6 +2251,19 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
+        bool TrySetCheckButtonText(State& state, OpaqueCheckButton& checkButton, const std::string& text) {
+            if ((state.checkButtonSetText == nullptr) || (state.locStringCtor == nullptr) || (state.locStringDtor == nullptr)) {
+                return false;
+            }
+
+            const std::wstring wideText = ToWide(text);
+            OpaqueLocString locString = {};
+            state.locStringCtor(locString.Get(), wideText.c_str());
+            state.checkButtonSetText(checkButton.Get(), locString.Get());
+            state.locStringDtor(locString.Get());
+            return true;
+        }
+
         bool BuildOverlay(State& state) {
             if (state.overlayBuilt) {
                 return true;
@@ -2433,7 +2490,44 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Row label widgets created and attached.");
 
-            // Step 11: Create native ComboBox widgets for enum rows and resolve their child widgets.
+            // Step 11: Resolve native CheckButton widgets preloaded by cohmodconfigui.screen.
+            for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
+                const std::string rowCheckButtonName = MakeRowCheckButtonName(i);
+                state.rowCheckButtonWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowCheckButtonName.c_str(), 0);
+                if (state.rowCheckButtonWidgets[i] == nullptr) {
+                    state.rowCheckButtonWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowCheckButtonName.c_str(), 1);
+                    if (state.rowCheckButtonWidgets[i] == nullptr) {
+                        LogError("CoH Mod Config UI: Failed to resolve preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
+                        return false;
+                    }
+                }
+
+                if (!RemoveRenderChild(state, state.rootWidgetRaw, state.rowCheckButtonWidgets[i])) {
+                    LogError("CoH Mod Config UI: Failed to remove preloaded CheckButton widget '" + rowCheckButtonName + "' from the root render tree for row " + std::to_string(i) + ".");
+                    return false;
+                }
+
+                ConfigureRawWidget(
+                    state,
+                    state.rowCheckButtonWidgets[i],
+                    rowCheckButtonName.c_str(),
+                    kRowControlPositionX,
+                    kFirstRowPositionY + (static_cast<float>(i) * kRowSpacingY),
+                    kRowCheckButtonSizeX,
+                    kRowCheckButtonSizeY,
+                    state.panelWidgetRaw
+                );
+                if (!AttachRenderChild(state, state.panelWidgetRaw, state.rowCheckButtonWidgets[i])) {
+                    LogError("CoH Mod Config UI: Failed to attach preloaded CheckButton widget '" + rowCheckButtonName + "' to the panel render tree for row " + std::to_string(i) + ".");
+                    return false;
+                }
+
+                SetRawWidgetVisible(state, state.rowCheckButtonWidgets[i], false);
+                LogInfo("CoH Mod Config UI: Resolved, moved, and attached preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
+            }
+            LogInfo("CoH Mod Config UI: Row bool CheckButton widgets resolved from the active screen.");
+
+            // Step 12: Create native ComboBox widgets for enum rows and resolve their child widgets.
             void* optionsMenuDonorScreen = nullptr;
             if (!EnsureDonorScreenLoaded(state, optionsMenuDonorScreen, kOptionsmenuDonorScreenName)) {
                 LogError("CoH Mod Config UI: Failed to load donor screen '" + std::string(kOptionsmenuDonorScreenName) + "' for native ComboBox widgets.");
@@ -2661,7 +2755,7 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Native row ComboBox widgets created, attached, and child widgets resolved.");
 
-            // Step 12: Construct and bind title, summary, footer, row label, enum label, and enum button proxies.
+            // Step 13: Construct and bind title, summary, footer, row label, bool, and enum proxies.
             state.textLabelCtor(state.titleLabel.Get());
             state.widgetProxyBind(state.titleLabel.Get(), state.titleLabelRaw);
             ApplyWidgetProxyState(state, state.titleLabel.Get());
@@ -2699,13 +2793,21 @@ namespace ConfigUi::Frontend {
                     state.widgetProxySetEnabled(state.rowArrowButtons[i].Get(), true);
                 }
 
-                state.checkButtonCtor(state.rowCheckButtons[i].Get());
+                if (!BindCheckButtonProxy(state, state.rowCheckButtons[i], state.rowCheckButtonWidgets[i])) {
+                    LogError("CoH Mod Config UI: Failed to bind CheckButton proxy for row " + std::to_string(i) + ".");
+                    return false;
+                }
+                ApplyWidgetProxyState(state, state.rowCheckButtons[i].Get());
+                if (!TrySetCheckButtonText(state, state.rowCheckButtons[i], BuildEmptyButtonText())) {
+                    LogWarning("CoH Mod Config UI: Failed to blank CheckButton text for row " + std::to_string(i) + ".");
+                }
+
                 state.progressBarCtor(state.rowProgressBars[i].Get());
             }
             LogInfo("CoH Mod Config UI: All proxy objects constructed.");
 
             state.overlayBuilt = true;
-            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + summary + footer + row labels + native enum ComboBox child binding milestone).");
+            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + summary + footer + row labels + row CheckButtons + native enum ComboBox child binding milestone).");
             return true;
         }
 
@@ -2747,6 +2849,10 @@ namespace ConfigUi::Frontend {
                 state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), false);
                 state.widgetProxySetVisible(state.rowProgressBars[rowIndex].Get(), false);
             }
+            SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowProgressBarWidgets[rowIndex], false);
             state.rowObservedListBoxSelection[rowIndex] = -1;
             state.rowHasObservedListBoxSelection[rowIndex] = false;
             state.rowActiveControlType[rowIndex] = CoHModSDKConfigType_Bool;
@@ -2766,6 +2872,10 @@ namespace ConfigUi::Frontend {
                 state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), false);
                 state.widgetProxySetVisible(state.rowProgressBars[rowIndex].Get(), false);
             }
+            SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], false);
+            SetRawWidgetVisible(state, state.rowProgressBarWidgets[rowIndex], false);
 
             switch (opt.type) {
             case CoHModSDKConfigType_Bool:
@@ -2773,6 +2883,7 @@ namespace ConfigUi::Frontend {
                 if (state.checkButtonSetChecked != nullptr) {
                     state.checkButtonSetChecked(state.rowCheckButtons[rowIndex].Get(), opt.currentValue.boolValue != 0u);
                 }
+                SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], true);
                 if (state.widgetProxySetVisible != nullptr) {
                     state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), true);
                 }
@@ -2794,6 +2905,7 @@ namespace ConfigUi::Frontend {
                 }
                 state.progressBarSetRange(state.rowProgressBars[rowIndex].Get(), 0.0f, 1.0f);
                 state.progressBarSetProgress(state.rowProgressBars[rowIndex].Get(), progress);
+                SetRawWidgetVisible(state, state.rowProgressBarWidgets[rowIndex], true);
                 if (state.widgetProxySetVisible != nullptr) {
                     state.widgetProxySetVisible(state.rowProgressBars[rowIndex].Get(), true);
                 }
@@ -2803,6 +2915,8 @@ namespace ConfigUi::Frontend {
             case CoHModSDKConfigType_Enum:
             default:
                 // Show dropdown-style value label + arrow button.
+                SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], true);
+                SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], true);
                 ConfigureRowListBoxGeometry(state, rowIndex, opt);
                 if (!PopulateEnumListBox(state, state.rowListBoxWidgets[rowIndex], opt, rowIndex)) {
                     LogWarning("CoH Mod Config UI: Failed to populate enum list box for row " + std::to_string(rowIndex) + ".");
