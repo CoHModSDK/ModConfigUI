@@ -53,6 +53,12 @@ namespace {
             { 0, "compact", "Compact" },
             { 1, "standard", "Standard" },
             { 2, "verbose", "Verbose" },
+            { 3, "minimal", "Minimal" },
+            //{ 4, "wide", "Wide" },
+            //{ 5, "stacked", "Stacked" },
+            //{ 6, "dense", "Dense" },
+            //{ 7, "spacious", "Spacious" },
+            //{ 8, "debug", "Debug" },
         };
 
         static const CoHModSDKConfigOptionV1 kOptions[] = {
