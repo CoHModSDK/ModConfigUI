@@ -43,17 +43,13 @@ namespace ConfigUi::Frontend {
         constexpr std::size_t kOpaqueCustomListBoxItemOldStorageSize = 16384u;
         constexpr std::size_t kVisibleRowCount = 5u;
         constexpr char kGroupWidgetTypeName[] = "Group";
-        constexpr char kButtonWidgetTypeName[] = "Button";
         constexpr char kComboBoxWidgetTypeName[] = "ComboBox";
         constexpr char kCheckButtonWidgetTypeName[] = "CheckButton";
         constexpr char kProgressBarWidgetTypeName[] = "ProgressBar";
         constexpr char kTextLabelWidgetTypeName[] = "TextLabel";
         constexpr char kScreenName[] = "cohmodconfigui";
         constexpr char kTemplateScreenName[] = "prompt_performance_test";
-        constexpr char kTemplateRootWidgetName[] = "grp_screen";
         constexpr char kTemplatePanelWidgetName[] = "perfGrp";
-        constexpr char kTemplateButtonWidgetName[] = "btn_continue";
-        constexpr char kTemplateTitleWidgetName[] = "title";
         constexpr char kTemplateLabelWidgetName[] = "minimumResults";
         constexpr char kRootWidgetName[] = "cohmodconfigui_root";
         constexpr char kPanelButtonName[] = "cohmodconfigui_panel";
@@ -84,12 +80,10 @@ namespace ConfigUi::Frontend {
         constexpr std::uintptr_t kWidgetFactoryCreateRva = 0x000421A0u;
         constexpr std::uintptr_t kFindWidgetExtensionRva = 0x00031810u;
         constexpr std::uintptr_t kAddRenderChildRva = 0x0003DBF0u;
-        constexpr std::uintptr_t kSetArtTextureRva = 0x00031320u;
         constexpr std::uintptr_t kFindWidgetByNameRva = 0x0003BAB0u;
         constexpr int kRenderExtensionId = 6;
         constexpr int kDrawChildrenExtensionId = 1;
         constexpr int kProgressChildExtensionId = 14;
-        constexpr int kDropDownExtensionId = 18;
         constexpr int kDefaultScreenActivationType = 0;
         constexpr int kWidgetFactoryCreateFlag = 1;
         constexpr float kNativeAspectRatio = 1.77778f;
@@ -214,17 +208,8 @@ namespace ConfigUi::Frontend {
         using CustomListBoxGetSelectedIndexFn = long(__thiscall*)(const void* customListBox);
         using CustomListBoxScrollToTopFn = void(__thiscall*)(void* customListBox);
         using CustomListBoxGetOldCustomItemFn = void* (__thiscall*)(void* customListBox);
-        using CustomListBoxItemOldCtorFn = void(__thiscall*)(void* customListBoxItemOld);
-        using CustomListBoxItemOldDtorFn = void(__thiscall*)(void* customListBoxItemOld);
         using CustomListBoxItemOldBindFn = void(__thiscall*)(void* customListBoxItemOld, const void* listBoxProxy, const char* itemName, long itemIndex);
         using CustomListBoxItemOldSetTextFn = void(__thiscall*)(void* customListBoxItemOld, const void* locString);
-        using TextListBoxDeleteAllItemsFn = void(__thiscall*)(void* textListBox);
-        using TextListBoxAddItemFn = long(__thiscall*)(void* textListBox, const char* itemName, const void* locString, long itemData, bool enabled);
-        using TextListBoxSelectItemFn = void(__thiscall*)(void* textListBox, long itemIndex);
-        using TextListBoxResizeListBoxFn = void(__thiscall*)(void* textListBox);
-        using TextListBoxScrollToTopFn = void(__thiscall*)(void* textListBox);
-        // WidgetProxy::SetTextHAlign(HAlign, artStateName) — HAlign: 0=Left, 1=Center, 2=Right (assumed)
-        using WidgetProxySetTextHAlignFn = void(__thiscall*)(void* widgetProxy, int hAlign, const char* artStateName);
         using FindWidgetExtensionFn = void* (__thiscall*)(void* widget, int extensionId);
         using FindWidgetByNameFn = void* (__stdcall*)(void* rootWidget, const char* name, int flags);
         using WidgetGetPresentationFn = void* (__thiscall*)(void* widget);
@@ -358,16 +343,8 @@ namespace ConfigUi::Frontend {
             CustomListBoxGetSelectedIndexFn customListBoxGetSelectedIndex = nullptr;
             CustomListBoxScrollToTopFn customListBoxScrollToTop = nullptr;
             CustomListBoxGetOldCustomItemFn customListBoxGetOldCustomItem = nullptr;
-            CustomListBoxItemOldCtorFn customListBoxItemOldCtor = nullptr;
-            CustomListBoxItemOldDtorFn customListBoxItemOldDtor = nullptr;
             CustomListBoxItemOldBindFn customListBoxItemOldBind = nullptr;
             CustomListBoxItemOldSetTextFn customListBoxItemOldSetText = nullptr;
-            TextListBoxDeleteAllItemsFn textListBoxDeleteAllItems = nullptr;
-            TextListBoxAddItemFn textListBoxAddItem = nullptr;
-            TextListBoxSelectItemFn textListBoxSelectItem = nullptr;
-            TextListBoxResizeListBoxFn textListBoxResizeListBox = nullptr;
-            TextListBoxScrollToTopFn textListBoxScrollToTop = nullptr;
-            WidgetProxySetTextHAlignFn widgetProxySetTextHAlign = nullptr;
             FindWidgetExtensionFn findWidgetExtension = nullptr;
             FindWidgetByNameFn findWidgetByName = nullptr;
             WidgetGetPresentationFn widgetGetPresentation = nullptr;
@@ -855,7 +832,6 @@ namespace ConfigUi::Frontend {
             ResolveOptionalExport(userInterfaceModule, "?SetNativeAspect@Screen@UI@@QAEXM@Z", state.screenSetNativeAspect);
             ResolveOptionalExport(userInterfaceModule, "?SetMultiline@TextLabel@UI@@QAEX_N@Z", state.textLabelSetMultiline);
             ResolveOptionalExport(userInterfaceModule, "?SetAutoSize@TextLabel@UI@@QAEX_N@Z", state.textLabelSetAutoSize);
-            ResolveOptionalExport(userInterfaceModule, "?SetTextHAlign@WidgetProxy@UI@@QAEXW4HAlign@RenderProxy@@PBD@Z", state.widgetProxySetTextHAlign);
             ResolveOptionalExport(userInterfaceModule, "?GetState@Widget@UI@@QBE_NW4WidgetState@12@@Z", state.widgetGetState);
             ResolveOptionalExport(userInterfaceModule, "?SetText@CheckButton@UI@@QAEXABVLocString@@@Z", state.checkButtonSetText);
             ResolveOptionalExport(userInterfaceModule, "??0CustomListBox@UI@@QAE@XZ", state.customListBoxCtor);
@@ -866,15 +842,8 @@ namespace ConfigUi::Frontend {
             ResolveOptionalExport(userInterfaceModule, "?GetSelectedIndex@CustomListBox@UI@@QBEJXZ", state.customListBoxGetSelectedIndex);
             ResolveOptionalExport(userInterfaceModule, "?ScrollToTop@CustomListBox@UI@@QAEXXZ", state.customListBoxScrollToTop);
             ResolveOptionalExport(userInterfaceModule, "?GetOldCustomItem@CustomListBox@UI@@QAEPAVCustomListBoxItemOld@2@XZ", state.customListBoxGetOldCustomItem);
-            ResolveOptionalExport(userInterfaceModule, "??0CustomListBoxItemOld@UI@@QAE@XZ", state.customListBoxItemOldCtor);
-            ResolveOptionalExport(userInterfaceModule, "??1CustomListBoxItemOld@UI@@UAE@XZ", state.customListBoxItemOldDtor);
             ResolveOptionalExport(userInterfaceModule, "?Bind@CustomListBoxItemOld@UI@@QAEXABVWidgetProxy@2@PBDJ@Z", state.customListBoxItemOldBind);
             ResolveOptionalExport(userInterfaceModule, "?SetText@CustomListBoxItemOld@UI@@QAEXABVLocString@@@Z", state.customListBoxItemOldSetText);
-            ResolveOptionalExport(userInterfaceModule, "?DeleteAllItems@TextListBox@UI@@QAEXXZ", state.textListBoxDeleteAllItems);
-            ResolveOptionalExport(userInterfaceModule, "?AddItem@TextListBox@UI@@QAEJPBDABVLocString@@J_N@Z", state.textListBoxAddItem);
-            ResolveOptionalExport(userInterfaceModule, "?SelectItem@TextListBox@UI@@QAEXJ@Z", state.textListBoxSelectItem);
-            ResolveOptionalExport(userInterfaceModule, "?ResizeListBox@TextListBox@UI@@QAEXXZ", state.textListBoxResizeListBox);
-            ResolveOptionalExport(userInterfaceModule, "?ScrollToTop@TextListBox@UI@@QAEXXZ", state.textListBoxScrollToTop);
             ResolveOptionalExport(userInterfaceModule, "?GetProgress@ProgressBar@UI@@QBEMXZ", state.progressBarGetProgress);
             ResolveOptionalExport(userInterfaceModule, "?GetStyleManager@ScreenManager@UI@@QAEPAVStyleManager@2@XZ", state.getStyleManager);
             ResolveOptionalExport(userInterfaceModule, "?SetTexture@ProgressBar@UI@@QAEXPBD@Z", state.progressBarSetTexture);
@@ -1834,86 +1803,6 @@ namespace ConfigUi::Frontend {
             }
 
             return AddRenderChild(state, parentRenderObject, childWidget);
-        }
-
-        // Set texture on all Graphic art objects in a widget's Presentation.
-        // Calls FUN_10031320 (internal art texture setter): iterates Presentation's art objects,
-        // dynamic_casts each to UI::Graphic, and loads the texture from the given path.
-        bool SetWidgetArtTexture(State& state, void* rawWidget, const char* texturePath) {
-            if ((rawWidget == nullptr) || (texturePath == nullptr) || (state.findWidgetExtension == nullptr)) {
-                return false;
-            }
-            void* ext6 = state.findWidgetExtension(rawWidget, kRenderExtensionId);
-            if (ext6 == nullptr) {
-                LogWarning("CoH Mod Config UI: SetWidgetArtTexture — QI(6) returned null.");
-                return false;
-            }
-#if defined(_M_IX86)
-            void* fnAddr = reinterpret_cast<void*>(state.userInterfaceBase + kSetArtTextureRva);
-            char result = 0;
-            __asm {
-                push 1              // param_4: flag (char, pushed as dword)
-                push 0              // param_3: nameFilter (nullptr)
-                mov eax, texturePath
-                push eax            // param_2: texturePath
-                mov eax, ext6
-                push eax            // param_1: renderExt
-                call fnAddr
-                // __stdcall: callee cleans up (ret 0x10)
-                mov result, al
-            }
-            return result != 0;
-#else
-            return false;
-#endif
-        }
-
-        // Directly patch HAlign on all art objects reachable through the render extension.
-        // Art objects live at [ext6+4]+0x58 -> collection: [0]=array_ptr, [4]=count.
-        // Each art object's HAlign is at offset +0x60 (Left=0, Centre=1, Right=2).
-        // Safe to call on TextLabel widgets where all art objects are UI::Text type.
-        bool PatchArtObjectHAlign(State& state, void* rawWidget, int hAlign) {
-            if ((rawWidget == nullptr) || (state.findWidgetExtension == nullptr)) {
-                return false;
-            }
-
-            void* ext6 = state.findWidgetExtension(rawWidget, kRenderExtensionId);
-            if (ext6 == nullptr) {
-                LogWarning("CoH Mod Config UI: PatchArtObjectHAlign — QI(6) returned null.");
-                return false;
-            }
-
-            // ext6+4 -> sub-object, sub+0x58 -> art collection pointer
-            const auto ext6Addr = reinterpret_cast<std::uintptr_t>(ext6);
-            void* subObject = *reinterpret_cast<void**>(ext6Addr + 4u);
-            if (subObject == nullptr) {
-                LogWarning("CoH Mod Config UI: PatchArtObjectHAlign — ext6+4 is null.");
-                return false;
-            }
-
-            const auto subAddr = reinterpret_cast<std::uintptr_t>(subObject);
-            void* collection = *reinterpret_cast<void**>(subAddr + 0x58u);
-            if (collection == nullptr) {
-                LogWarning("CoH Mod Config UI: PatchArtObjectHAlign — art collection is null.");
-                return false;
-            }
-
-            const auto collAddr = reinterpret_cast<std::uintptr_t>(collection);
-            void** arrayPtr = *reinterpret_cast<void***>(collAddr);
-            const unsigned int count = *reinterpret_cast<const unsigned int*>(collAddr + 4u);
-
-            unsigned int patched = 0u;
-            for (unsigned int i = 0u; i < count; ++i) {
-                if (arrayPtr[i] != nullptr) {
-                    const auto artAddr = reinterpret_cast<std::uintptr_t>(arrayPtr[i]);
-                    *reinterpret_cast<int*>(artAddr + 0x60u) = hAlign;
-                    ++patched;
-                }
-            }
-
-            LogInfo("CoH Mod Config UI: PatchArtObjectHAlign patched " +
-                std::to_string(patched) + " art objects to hAlign=" + std::to_string(hAlign) + ".");
-            return patched > 0u;
         }
 
         bool EnsureDonorScreenLoaded(State& state, void*& screenSlot, const char* screenName) {
