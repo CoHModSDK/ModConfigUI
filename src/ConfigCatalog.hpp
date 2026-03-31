@@ -30,6 +30,7 @@ namespace ConfigUi {
 
     struct ModEntry {
         std::string modId;
+        std::string displayName;
         std::vector<OptionEntry> options;
     };
 

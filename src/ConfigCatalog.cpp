@@ -1,10 +1,58 @@
 #include "ConfigCatalog.hpp"
 
 #include <algorithm>
+#include <cctype>
 #include <utility>
 
 namespace ConfigUi {
     namespace {
+        std::string BuildFallbackDisplayNameFromModId(const std::string& modId) {
+            std::string displayName = modId;
+            const std::size_t lastSeparator = displayName.find_last_of("./\\:");
+            if ((lastSeparator != std::string::npos) && ((lastSeparator + 1u) < displayName.size())) {
+                displayName = displayName.substr(lastSeparator + 1u);
+            }
+
+            for (char& character : displayName) {
+                if ((character == '_') || (character == '-') || (character == '.')) {
+                    character = ' ';
+                }
+            }
+
+            bool previousWasSpace = true;
+            for (char& character : displayName) {
+                const unsigned char unsignedCharacter = static_cast<unsigned char>(character);
+                if (std::isspace(unsignedCharacter)) {
+                    previousWasSpace = true;
+                    continue;
+                }
+
+                character = static_cast<char>(
+                    previousWasSpace ? std::toupper(unsignedCharacter) : std::tolower(unsignedCharacter)
+                );
+                previousWasSpace = false;
+            }
+
+            if (displayName.empty()) {
+                return modId;
+            }
+
+            return displayName;
+        }
+
+        std::string ResolveDisplayName(const std::string& modId) {
+            ModSDK::Config::ModInfo modInfo = {};
+            modInfo.abiVersion = COHMODSDK_ABI_VERSION;
+            modInfo.size = sizeof(modInfo);
+            if (ModSDK::Config::GetModInfo(modId.c_str(), &modInfo) &&
+                (modInfo.name != nullptr) &&
+                (modInfo.name[0] != '\0')) {
+                return modInfo.name;
+            }
+
+            return BuildFallbackDisplayNameFromModId(modId);
+        }
+
         bool CopyOption(const CoHModSDKConfigOptionV1* option, const CoHModSDKConfigValueV1* currentValue, void* userData) {
             if ((option == nullptr) || (currentValue == nullptr) || (userData == nullptr)) {
                 return false;
@@ -71,6 +119,7 @@ namespace ConfigUi {
         for (const std::string& modId : state.modIds) {
             ModEntry modEntry = {};
             modEntry.modId = modId;
+            modEntry.displayName = ResolveDisplayName(modId);
 
             if (!ModSDK::Config::EnumerateOptions(modEntry.modId.c_str(), &CopyOption, &modEntry)) {
                 Clear();
@@ -93,6 +142,10 @@ namespace ConfigUi {
             mods.begin(),
             mods.end(),
             [](const ModEntry& left, const ModEntry& right) {
+                if (left.displayName != right.displayName) {
+                    return left.displayName < right.displayName;
+                }
+
                 return left.modId < right.modId;
             }
         );

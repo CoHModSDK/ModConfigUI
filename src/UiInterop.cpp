@@ -43,11 +43,13 @@ namespace ConfigUi::Frontend {
         constexpr std::size_t kOpaqueCustomListBoxStorageSize = 16384u;
         constexpr std::size_t kOpaqueCustomListBoxItemOldStorageSize = 16384u;
         constexpr std::size_t kOpaqueNativeSliderStorageSize = 1024u;
-        constexpr std::size_t kVisibleRowCount = 5u;
+        constexpr std::size_t kVisibleRowCount = 7u;
         constexpr char kGroupWidgetTypeName[] = "Group";
+        constexpr char kArtLabelWidgetTypeName[] = "ArtLabel";
         constexpr char kComboBoxWidgetTypeName[] = "ComboBox";
         constexpr char kCheckButtonWidgetTypeName[] = "CheckButton";
         constexpr char kTextLabelWidgetTypeName[] = "TextLabel";
+        constexpr char kScrollBarWidgetTypeName[] = "ScrollBar";
         constexpr char kScreenName[] = "cohmodconfigui";
         constexpr char kTemplateScreenName[] = "prompt_performance_test";
         constexpr char kTemplatePanelWidgetName[] = "perfGrp";
@@ -55,8 +57,11 @@ namespace ConfigUi::Frontend {
         constexpr char kRootWidgetName[] = "cohmodconfigui_root";
         constexpr char kPanelButtonName[] = "cohmodconfigui_panel";
         constexpr char kTitleLabelName[] = "cohmodconfigui_title";
+        constexpr char kPanelScrollBarName[] = "scrlBar_cohmodconfigui_panel";
+        constexpr char kPanelScrollBarTrackVisualName[] = "cohmodconfigui_panelscrolltrack";
+        constexpr char kPanelScrollBarThumbVisualName[] = "cohmodconfigui_panelscrollthumb";
+        constexpr char kModSelectorComboBoxName[] = "drop_cohmodconfigui_mod";
         constexpr char kSummaryLabelName[] = "cohmodconfigui_summary";
-        constexpr char kFooterLabelName[] = "cohmodconfigui_footer";
         constexpr char kRowLabelNamePrefix[] = "cohmodconfigui_rowlabel_";
         constexpr char kRowButtonNamePrefix[] = "cohmodconfigui_row_";
         constexpr char kRowCheckButtonNamePrefix[] = "cohmodconfigui_rowcheck_";
@@ -103,20 +108,34 @@ namespace ConfigUi::Frontend {
         constexpr float kTitlePositionY = 0.03f;
         constexpr float kTitleSizeX = 0.90f;
         constexpr float kTitleSizeY = 0.06f;
+        constexpr float kModSelectorPositionX = 0.05f;
+        constexpr float kModSelectorPositionY = 0.095f;
+        constexpr float kModSelectorSizeX = 0.35f;
+        constexpr float kModSelectorSizeY = 0.035f;
+        constexpr float kModSelectorButtonSizeX = 0.025f;
+        constexpr float kModSelectorButtonOffsetX = kModSelectorSizeX - kModSelectorButtonSizeX;
+        constexpr float kModSelectorLabelSizeX = kModSelectorSizeX - kModSelectorButtonSizeX;
+        constexpr float kModSelectorListBoxPositionX = 0.0f;
+        constexpr float kModSelectorListBoxPositionY = kModSelectorSizeY;
+        constexpr float kModSelectorListBoxSizeX = kModSelectorSizeX;
+        constexpr float kModSelectorListBoxSizeY = kModSelectorSizeY * 4.0f;
+        constexpr float kModSelectorListBoxScrollBarSizeX = 0.015f;
+        constexpr float kModSelectorListBoxContentSizeX = kModSelectorListBoxSizeX - kModSelectorListBoxScrollBarSizeX;
         constexpr float kSummaryPositionX = 0.05f;
-        constexpr float kSummaryPositionY = 0.095f;
+        constexpr float kSummaryPositionY = 0.145f;
         constexpr float kSummarySizeX = 0.90f;
         constexpr float kSummarySizeY = 0.06f;
-        constexpr float kFooterPositionX = 0.05f;
-        constexpr float kFooterPositionY = 0.57f;
-        constexpr float kFooterSizeX = 0.90f;
-        constexpr float kFooterSizeY = 0.04f;
         constexpr float kFirstRowPositionX = 0.03f;
-        constexpr float kFirstRowPositionY = 0.22f;
+        constexpr float kFirstRowPositionY = 0.165f;
         constexpr float kRowSpacingY = 0.06f;
-        constexpr float kRowLabelSizeX = 0.18f;
+        constexpr float kRowLabelSizeX = 0.20f;
         constexpr float kRowLabelSizeY = 0.035f;
-        constexpr float kRowControlPositionX = 0.22f;
+        constexpr float kRowControlPositionX = 0.24f;
+        constexpr float kPanelScrollBarPositionX = 0.910f;
+        constexpr float kPanelScrollBarPositionY = 0.12f;
+        constexpr float kPanelScrollBarSizeX = 0.020f;
+        constexpr float kPanelScrollBarSizeY = 0.74f;
+        constexpr float kPanelScrollBarMinThumbSizeY = 0.04f;
         constexpr float kRowValueLabelSizeX = 0.12f;
         constexpr float kRowValueLabelSizeY = 0.035f;
         constexpr float kRowArrowButtonOffsetX = 0.12f;
@@ -192,6 +211,7 @@ namespace ConfigUi::Frontend {
         using CustomWidgetDtorFn = void(__thiscall*)(void* customWidget);
         using ArtLabelCtorFn = void(__thiscall*)(void* artLabel);
         using ArtLabelDtorFn = void(__thiscall*)(void* artLabel);
+        using ArtLabelSetAllArtVisibleFn = void(__thiscall*)(void* artLabel, bool visible);
         using ButtonCtorFn = void(__thiscall*)(void* button);
         using ButtonDtorFn = void(__thiscall*)(void* button);
         using ButtonSetTextFn = void(__thiscall*)(void* button, const void* locString);
@@ -211,6 +231,9 @@ namespace ConfigUi::Frontend {
         using CustomListBoxDeleteAllItemsFn = void(__thiscall*)(void* customListBox);
         using CustomListBoxSelectItemFn = bool(__thiscall*)(void* customListBox, long itemIndex);
         using CustomListBoxGetSelectedIndexFn = long(__thiscall*)(const void* customListBox);
+        using CustomListBoxGetScrollPositionFn = float(__thiscall*)(const void* customListBox);
+        using CustomListBoxGetScrollRangeFn = const void* (__thiscall*)(const void* customListBox);
+        using CustomListBoxSetScrollPositionFn = void(__thiscall*)(void* customListBox, float scrollPosition);
         using CustomListBoxScrollToTopFn = void(__thiscall*)(void* customListBox);
         using CustomListBoxGetOldCustomItemFn = void* (__thiscall*)(void* customListBox);
         using CustomListBoxItemOldBindFn = void(__thiscall*)(void* customListBoxItemOld, const void* listBoxProxy, const char* itemName, long itemIndex);
@@ -253,6 +276,12 @@ namespace ConfigUi::Frontend {
 
         struct OpaqueTextLabel {
             alignas(16) std::array<std::byte, kOpaqueTextLabelStorageSize> storage = {};
+            void* Get() { return storage.data(); }
+            const void* Get() const { return storage.data(); }
+        };
+
+        struct OpaqueArtLabel {
+            alignas(16) std::array<std::byte, kOpaqueButtonStorageSize> storage = {};
             void* Get() { return storage.data(); }
             const void* Get() const { return storage.data(); }
         };
@@ -319,9 +348,22 @@ namespace ConfigUi::Frontend {
             bool installed = false;
             bool overlayBuilt = false;
             bool overlayVisible = false;
+            std::size_t selectedModIndex = 0u;
             std::size_t selectedOptionIndex = 0u;
+            std::size_t topVisibleOptionIndex = 0u;
+            bool modSelectorDropDownOpen = false;
+            long activeEnumDropDownRowIndex = -1;
             int toggleKey = 0;
             void* screenManagerUpdateTarget = nullptr;
+            HWND gameWindowHandle = nullptr;
+            WNDPROC originalGameWindowProc = nullptr;
+            LONG pendingMouseWheelDelta = 0;
+            bool hasPendingLeftClick = false;
+            POINT pendingLeftClickClientPosition = {};
+            bool hasPendingMouseMove = false;
+            POINT pendingMouseMoveClientPosition = {};
+            bool panelScrollBarDragging = false;
+            float panelScrollBarDragOffsetY = 0.0f;
             GetScreenManagerFn getScreenManager = nullptr;
             GetStyleManagerFn getStyleManager = nullptr;
             std::uintptr_t userInterfaceBase = 0u;
@@ -355,6 +397,7 @@ namespace ConfigUi::Frontend {
             CustomWidgetDtorFn customWidgetDtor = nullptr;
             ArtLabelCtorFn artLabelCtor = nullptr;
             ArtLabelDtorFn artLabelDtor = nullptr;
+            ArtLabelSetAllArtVisibleFn artLabelSetAllArtVisible = nullptr;
             ButtonCtorFn buttonCtor = nullptr;
             ButtonDtorFn buttonDtor = nullptr;
             ButtonSetTextFn buttonSetText = nullptr;
@@ -374,6 +417,9 @@ namespace ConfigUi::Frontend {
             CustomListBoxDeleteAllItemsFn customListBoxDeleteAllItems = nullptr;
             CustomListBoxSelectItemFn customListBoxSelectItem = nullptr;
             CustomListBoxGetSelectedIndexFn customListBoxGetSelectedIndex = nullptr;
+            CustomListBoxGetScrollPositionFn customListBoxGetScrollPosition = nullptr;
+            CustomListBoxGetScrollRangeFn customListBoxGetScrollRange = nullptr;
+            CustomListBoxSetScrollPositionFn customListBoxSetScrollPosition = nullptr;
             CustomListBoxScrollToTopFn customListBoxScrollToTop = nullptr;
             CustomListBoxGetOldCustomItemFn customListBoxGetOldCustomItem = nullptr;
             CustomListBoxItemOldBindFn customListBoxItemOldBind = nullptr;
@@ -399,8 +445,19 @@ namespace ConfigUi::Frontend {
             void* rootWidgetRaw = nullptr;
             void* panelWidgetRaw = nullptr;
             void* titleLabelRaw = nullptr;
+            void* panelScrollBarWidget = nullptr;
+            void* panelScrollBarTrackVisualWidget = nullptr;
+            void* panelScrollBarThumbVisualWidget = nullptr;
+            void* panelScrollBarDecButtonWidget = nullptr;
+            void* panelScrollBarIncButtonWidget = nullptr;
+            void* panelScrollBarTrackButtonWidget = nullptr;
+            void* panelScrollBarPageDownButtonWidget = nullptr;
+            void* panelScrollBarPageUpButtonWidget = nullptr;
+            void* modSelectorComboBoxWidget = nullptr;
+            void* modSelectorListBoxWidget = nullptr;
+            void* modSelectorValueLabelWidget = nullptr;
+            void* modSelectorArrowButtonWidget = nullptr;
             void* summaryLabelRaw = nullptr;
-            void* footerLabelRaw = nullptr;
             std::array<void*, kVisibleRowCount> rowLabelWidgets = {};
             // Enum widgets
             std::array<void*, kVisibleRowCount> rowComboBoxWidgets = {};
@@ -414,8 +471,9 @@ namespace ConfigUi::Frontend {
             std::array<void*, kVisibleRowCount> rowSliderButtonWidgets = {};
             std::array<void*, kVisibleRowCount> rowSliderBarWidgets = {};
             OpaqueTextLabel titleLabel = {};
+            OpaqueTextLabel modSelectorValueLabel = {};
             OpaqueTextLabel summaryLabel = {};
-            OpaqueTextLabel footerLabel = {};
+            OpaqueButton modSelectorButton = {};
             std::array<OpaqueTextLabel, kVisibleRowCount> rowLabels = {};
             // Enum proxies
             std::array<OpaqueTextLabel, kVisibleRowCount> rowValueLabels = {};
@@ -426,6 +484,8 @@ namespace ConfigUi::Frontend {
             std::array<OpaqueGenericWidget, kVisibleRowCount> rowSliders = {};
             std::array<OpaqueNativeSlider, kVisibleRowCount> rowNativeSliders = {};
             // State tracking
+            std::array<bool, kVisibleRowCount> rowComboBoxWasActive = {};
+            std::array<bool, kVisibleRowCount> rowValueLabelWasActive = {};
             std::array<bool, kVisibleRowCount> rowArrowButtonWasActive = {};
             std::array<bool, kVisibleRowCount> rowCheckButtonWasActive = {};
             std::array<bool, kVisibleRowCount> rowNativeSliderInitialized = {};
@@ -433,10 +493,23 @@ namespace ConfigUi::Frontend {
             std::array<bool, kVisibleRowCount> rowHasObservedSliderProgress = {};
             std::array<long, kVisibleRowCount> rowObservedListBoxSelection = {};
             std::array<bool, kVisibleRowCount> rowHasObservedListBoxSelection = {};
+            bool modSelectorComboBoxWasActive = false;
+            bool modSelectorValueLabelWasActive = false;
+            bool modSelectorArrowButtonWasActive = false;
+            bool panelScrollBarPageDownWasActive = false;
+            bool panelScrollBarPageUpWasActive = false;
+            long observedModListSelection = -1;
+            bool hasObservedModListSelection = false;
             std::array<CoHModSDKConfigType, kVisibleRowCount> rowActiveControlType = {};
         };
 
+        struct FindProcessWindowContext {
+            DWORD processId = 0u;
+            HWND window = nullptr;
+        };
+
         struct SelectedOptionRef {
+            std::size_t modIndex = 0u;
             std::size_t flatIndex = 0u;
             std::size_t optionCount = 0u;
             ModEntry* modEntry = nullptr;
@@ -448,8 +521,114 @@ namespace ConfigUi::Frontend {
             return state;
         }
 
+        BOOL CALLBACK FindProcessWindowProc(HWND hwnd, LPARAM lParam) {
+            if ((lParam == 0) || !IsWindowVisible(hwnd) || (GetWindow(hwnd, GW_OWNER) != nullptr)) {
+                return TRUE;
+            }
+
+            auto* context = reinterpret_cast<FindProcessWindowContext*>(lParam);
+            DWORD windowProcessId = 0u;
+            GetWindowThreadProcessId(hwnd, &windowProcessId);
+            if (windowProcessId != context->processId) {
+                return TRUE;
+            }
+
+            context->window = hwnd;
+            return FALSE;
+        }
+
+        HWND FindGameWindowHandle() {
+            const DWORD currentProcessId = GetCurrentProcessId();
+            HWND foregroundWindow = GetForegroundWindow();
+            if (foregroundWindow != nullptr) {
+                DWORD foregroundProcessId = 0u;
+                GetWindowThreadProcessId(foregroundWindow, &foregroundProcessId);
+                if (foregroundProcessId == currentProcessId) {
+                    return foregroundWindow;
+                }
+            }
+
+            FindProcessWindowContext context = {};
+            context.processId = currentProcessId;
+            EnumWindows(&FindProcessWindowProc, reinterpret_cast<LPARAM>(&context));
+            return context.window;
+        }
+
+        bool IsPointInsideOpenDropDown(State& state, HWND hwnd, const POINT& clientPoint);
+        bool TryMarkDropDownOpenFromClick(State& state, HWND hwnd, const POINT& clientPoint);
+        bool TryScrollOpenDropDown(State& state, int direction);
+
+        LRESULT CALLBACK HookedGameWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
+            State& state = GetState();
+
+            if ((message == WM_MOUSEWHEEL) && state.overlayVisible) {
+                const SHORT wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
+                if (wheelDelta != 0) {
+                    state.pendingMouseWheelDelta += static_cast<LONG>(wheelDelta);
+                    return 0;
+                }
+            }
+            else if ((message == WM_LBUTTONDOWN) && state.overlayVisible) {
+                POINT clientPoint = {};
+                clientPoint.x = static_cast<LONG>(static_cast<SHORT>(LOWORD(lParam)));
+                clientPoint.y = static_cast<LONG>(static_cast<SHORT>(HIWORD(lParam)));
+                if (!TryMarkDropDownOpenFromClick(state, hwnd, clientPoint) &&
+                    (state.modSelectorDropDownOpen || (state.activeEnumDropDownRowIndex >= 0)) &&
+                    !IsPointInsideOpenDropDown(state, hwnd, clientPoint)) {
+                    state.modSelectorDropDownOpen = false;
+                    state.activeEnumDropDownRowIndex = -1;
+                }
+
+                state.pendingLeftClickClientPosition.x = static_cast<LONG>(static_cast<SHORT>(LOWORD(lParam)));
+                state.pendingLeftClickClientPosition.y = static_cast<LONG>(static_cast<SHORT>(HIWORD(lParam)));
+                state.hasPendingLeftClick = true;
+            }
+            else if ((message == WM_MOUSEMOVE) && state.overlayVisible && state.panelScrollBarDragging) {
+                state.pendingMouseMoveClientPosition.x = static_cast<LONG>(static_cast<SHORT>(LOWORD(lParam)));
+                state.pendingMouseMoveClientPosition.y = static_cast<LONG>(static_cast<SHORT>(HIWORD(lParam)));
+                state.hasPendingMouseMove = true;
+            }
+            else if ((message == WM_LBUTTONUP) && state.overlayVisible) {
+                state.panelScrollBarDragging = false;
+                state.hasPendingMouseMove = false;
+            }
+
+            if (state.originalGameWindowProc != nullptr) {
+                return CallWindowProc(state.originalGameWindowProc, hwnd, message, wParam, lParam);
+            }
+
+            return DefWindowProc(hwnd, message, wParam, lParam);
+        }
+
+        bool InstallGameWindowHook(State& state) {
+            if ((state.gameWindowHandle != nullptr) && (state.originalGameWindowProc != nullptr)) {
+                return true;
+            }
+
+            HWND gameWindowHandle = FindGameWindowHandle();
+            if (gameWindowHandle == nullptr) {
+                return false;
+            }
+
+            SetLastError(0);
+            auto previousWindowProc = reinterpret_cast<WNDPROC>(
+                SetWindowLongPtr(gameWindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&HookedGameWindowProc))
+            );
+            if ((previousWindowProc == nullptr) && (GetLastError() != 0)) {
+                return false;
+            }
+
+            state.gameWindowHandle = gameWindowHandle;
+            state.originalGameWindowProc = previousWindowProc;
+            state.pendingMouseWheelDelta = 0;
+            return true;
+        }
+
         bool RefreshVisibleMenu(State& state);
         std::size_t ComputeFirstVisibleIndex(State& state);
+        bool TryGetVisibleRowOption(State& state, std::size_t rowIndex, SelectedOptionRef& outSelectedOption);
+        float ComputeListBoxHeightFromItemCount(std::size_t itemCount, float itemHeight);
+        float ComputeRowListBoxHeight(const OptionEntry& optionEntry);
 #if defined(_M_IX86)
         void __cdecl CallWithEaxContext0(void* eaxContext, void* targetFn);
 #endif
@@ -654,48 +833,58 @@ namespace ConfigUi::Frontend {
             return summary;
         }
 
-        std::size_t GetOptionCount(const Catalog& catalog) {
-            std::size_t optionCount = 0u;
-            for (const ModEntry& modEntry : catalog.GetMods()) {
-                optionCount += modEntry.options.size();
-            }
-
-            return optionCount;
-        }
-
-        bool TryGetOptionByFlatIndex(Catalog& catalog, std::size_t flatIndex, SelectedOptionRef& outSelectedOption) {
-            outSelectedOption = {};
-            outSelectedOption.optionCount = GetOptionCount(catalog);
-            if (flatIndex >= outSelectedOption.optionCount) {
-                return false;
-            }
-
-            std::size_t currentFlatIndex = 0u;
-            for (ModEntry& modEntry : catalog.GetMods()) {
-                for (OptionEntry& optionEntry : modEntry.options) {
-                    if (currentFlatIndex == flatIndex) {
-                        outSelectedOption.flatIndex = currentFlatIndex;
-                        outSelectedOption.modEntry = &modEntry;
-                        outSelectedOption.optionEntry = &optionEntry;
-                        return true;
-                    }
-
-                    ++currentFlatIndex;
-                }
-            }
-
-            return false;
-        }
-
-        bool TryGetSelectedOption(State& state, SelectedOptionRef& outSelectedOption) {
+        bool TryGetSelectedMod(State& state, ModEntry*& outModEntry, std::size_t& outModIndex) {
+            outModEntry = nullptr;
+            outModIndex = 0u;
             if (state.catalog == nullptr) {
                 return false;
             }
 
+            std::vector<ModEntry>& mods = state.catalog->GetMods();
+            if (mods.empty()) {
+                state.selectedModIndex = 0u;
+                state.selectedOptionIndex = 0u;
+                state.topVisibleOptionIndex = 0u;
+                return false;
+            }
+
+            if (state.selectedModIndex >= mods.size()) {
+                state.selectedModIndex = mods.size() - 1u;
+            }
+
+            outModIndex = state.selectedModIndex;
+            outModEntry = &mods[outModIndex];
+            return true;
+        }
+
+        bool TryGetOptionByIndexInMod(ModEntry& modEntry, std::size_t modIndex, std::size_t optionIndex, SelectedOptionRef& outSelectedOption) {
             outSelectedOption = {};
-            outSelectedOption.optionCount = GetOptionCount(*state.catalog);
+            outSelectedOption.modIndex = modIndex;
+            outSelectedOption.optionCount = modEntry.options.size();
+            if (optionIndex >= outSelectedOption.optionCount) {
+                return false;
+            }
+
+            outSelectedOption.flatIndex = optionIndex;
+            outSelectedOption.modEntry = &modEntry;
+            outSelectedOption.optionEntry = &modEntry.options[optionIndex];
+            return true;
+        }
+
+        bool TryGetSelectedOption(State& state, SelectedOptionRef& outSelectedOption) {
+            ModEntry* modEntry = nullptr;
+            std::size_t modIndex = 0u;
+            if (!TryGetSelectedMod(state, modEntry, modIndex) || (modEntry == nullptr)) {
+                return false;
+            }
+
+            outSelectedOption = {};
+            outSelectedOption.modIndex = modIndex;
+            outSelectedOption.optionCount = modEntry->options.size();
             if (outSelectedOption.optionCount == 0u) {
                 state.selectedOptionIndex = 0u;
+                state.topVisibleOptionIndex = 0u;
+                outSelectedOption.modEntry = modEntry;
                 return false;
             }
 
@@ -703,7 +892,437 @@ namespace ConfigUi::Frontend {
                 state.selectedOptionIndex = outSelectedOption.optionCount - 1u;
             }
 
-            return TryGetOptionByFlatIndex(*state.catalog, state.selectedOptionIndex, outSelectedOption);
+            return TryGetOptionByIndexInMod(*modEntry, modIndex, state.selectedOptionIndex, outSelectedOption);
+        }
+
+        std::size_t ComputeMaxFirstVisibleIndex(State& state) {
+            SelectedOptionRef selectedOption = {};
+            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
+                return 0u;
+            }
+
+            return selectedOption.optionCount - kVisibleRowCount;
+        }
+
+        void ClampTopVisibleOptionIndex(State& state) {
+            const std::size_t maxFirstVisibleIndex = ComputeMaxFirstVisibleIndex(state);
+            if (state.topVisibleOptionIndex > maxFirstVisibleIndex) {
+                state.topVisibleOptionIndex = maxFirstVisibleIndex;
+            }
+        }
+
+        void EnsureSelectedOptionVisible(State& state) {
+            SelectedOptionRef selectedOption = {};
+            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
+                state.topVisibleOptionIndex = 0u;
+                return;
+            }
+
+            ClampTopVisibleOptionIndex(state);
+            if (state.selectedOptionIndex < state.topVisibleOptionIndex) {
+                state.topVisibleOptionIndex = state.selectedOptionIndex;
+            }
+            else if (state.selectedOptionIndex >= (state.topVisibleOptionIndex + kVisibleRowCount)) {
+                state.topVisibleOptionIndex = state.selectedOptionIndex - kVisibleRowCount + 1u;
+            }
+
+            ClampTopVisibleOptionIndex(state);
+        }
+
+        bool TrySetOptionWindowTop(State& state, std::size_t newTopVisibleIndex) {
+            SelectedOptionRef selectedOption = {};
+            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
+                return false;
+            }
+
+            const std::size_t maxFirstVisibleIndex = selectedOption.optionCount - kVisibleRowCount;
+            newTopVisibleIndex = (std::min)(newTopVisibleIndex, maxFirstVisibleIndex);
+            if (newTopVisibleIndex == state.topVisibleOptionIndex) {
+                return false;
+            }
+
+            state.topVisibleOptionIndex = newTopVisibleIndex;
+            state.selectedOptionIndex = newTopVisibleIndex;
+            LogInfo(
+                "CoH Mod Config UI: Scrolled option window to first visible index " +
+                std::to_string(state.topVisibleOptionIndex) +
+                "."
+            );
+            RefreshVisibleMenu(state);
+            return true;
+        }
+
+        bool TryScrollOptionWindow(State& state, int deltaRows) {
+            if (deltaRows == 0) {
+                return false;
+            }
+
+            SelectedOptionRef selectedOption = {};
+            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
+                LogInfo(
+                    "CoH Mod Config UI: Ignored scroll request with delta " +
+                    std::to_string(deltaRows) +
+                    " because the current mod does not overflow the visible rows."
+                );
+                return false;
+            }
+
+            const long maxFirstVisibleIndex = static_cast<long>(selectedOption.optionCount - kVisibleRowCount);
+            const long currentTopVisibleIndex = static_cast<long>(state.topVisibleOptionIndex);
+            const long nextTopVisibleIndex = std::clamp(currentTopVisibleIndex + static_cast<long>(deltaRows), 0l, maxFirstVisibleIndex);
+            if (nextTopVisibleIndex == currentTopVisibleIndex) {
+                LogInfo(
+                    "CoH Mod Config UI: Ignored scroll request with delta " +
+                    std::to_string(deltaRows) +
+                    " because the option window is already at the boundary (top=" +
+                    std::to_string(state.topVisibleOptionIndex) +
+                    ")."
+                );
+                return false;
+            }
+
+            return TrySetOptionWindowTop(state, static_cast<std::size_t>(nextTopVisibleIndex));
+        }
+
+        bool IsPointInsideRect(float x, float y, float rectX, float rectY, float rectWidth, float rectHeight) {
+            return
+                (x >= rectX) &&
+                (x <= (rectX + rectWidth)) &&
+                (y >= rectY) &&
+                (y <= (rectY + rectHeight));
+        }
+
+        bool IsPointInsideOpenDropDown(State& state, HWND hwnd, const POINT& clientPoint) {
+            if ((hwnd == nullptr) || !IsWindow(hwnd)) {
+                return false;
+            }
+
+            if (!state.modSelectorDropDownOpen && (state.activeEnumDropDownRowIndex < 0)) {
+                return false;
+            }
+
+            RECT clientRect = {};
+            if (!GetClientRect(hwnd, &clientRect)) {
+                return false;
+            }
+
+            const LONG clientWidth = clientRect.right - clientRect.left;
+            const LONG clientHeight = clientRect.bottom - clientRect.top;
+            if ((clientWidth <= 0) || (clientHeight <= 0)) {
+                return false;
+            }
+
+            const float mouseX = static_cast<float>(clientPoint.x) / static_cast<float>(clientWidth);
+            const float mouseY = static_cast<float>(clientPoint.y) / static_cast<float>(clientHeight);
+
+            if (state.modSelectorDropDownOpen && (state.catalog != nullptr)) {
+                const std::size_t modCount = state.catalog->GetModCount();
+                const bool needsScrollBar = modCount > 4u;
+                const float listBoxSizeX = needsScrollBar ? kModSelectorListBoxSizeX : kModSelectorListBoxContentSizeX;
+                const float listBoxSizeY = ComputeListBoxHeightFromItemCount(modCount, kModSelectorSizeY);
+                const float rectX = kPanelPositionX + (kModSelectorPositionX * kPanelSizeX);
+                const float rectY = kPanelPositionY + ((kModSelectorPositionY + kModSelectorSizeY) * kPanelSizeY);
+                const float rectWidth = listBoxSizeX * kPanelSizeX;
+                const float rectHeight = listBoxSizeY * kPanelSizeY;
+                if (IsPointInsideRect(mouseX, mouseY, rectX, rectY, rectWidth, rectHeight)) {
+                    return true;
+                }
+            }
+
+            if (state.activeEnumDropDownRowIndex >= 0) {
+                SelectedOptionRef rowOption = {};
+                if (TryGetVisibleRowOption(state, static_cast<std::size_t>(state.activeEnumDropDownRowIndex), rowOption) &&
+                    (rowOption.optionEntry != nullptr) &&
+                    (rowOption.optionEntry->type == CoHModSDKConfigType_Enum)) {
+                    const std::size_t choiceCount = rowOption.optionEntry->choices.empty() ? 1u : rowOption.optionEntry->choices.size();
+                    const bool needsScrollBar = choiceCount > 4u;
+                    const float listBoxSizeX = needsScrollBar ? kRowListBoxSizeX : kRowListBoxContentSizeX;
+                    const float listBoxSizeY = ComputeRowListBoxHeight(*rowOption.optionEntry);
+                    const float rowTopY = kFirstRowPositionY + (static_cast<float>(state.activeEnumDropDownRowIndex) * kRowSpacingY);
+                    const float rectX = kPanelPositionX + ((kRowControlPositionX + kRowListBoxPositionX) * kPanelSizeX);
+                    const float rectY = kPanelPositionY + ((rowTopY + kRowListBoxPositionY) * kPanelSizeY);
+                    const float rectWidth = listBoxSizeX * kPanelSizeX;
+                    const float rectHeight = listBoxSizeY * kPanelSizeY;
+                    if (IsPointInsideRect(mouseX, mouseY, rectX, rectY, rectWidth, rectHeight)) {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        bool TryMarkDropDownOpenFromClick(State& state, HWND hwnd, const POINT& clientPoint) {
+            if ((hwnd == nullptr) || !IsWindow(hwnd)) {
+                return false;
+            }
+
+            RECT clientRect = {};
+            if (!GetClientRect(hwnd, &clientRect)) {
+                return false;
+            }
+
+            const LONG clientWidth = clientRect.right - clientRect.left;
+            const LONG clientHeight = clientRect.bottom - clientRect.top;
+            if ((clientWidth <= 0) || (clientHeight <= 0)) {
+                return false;
+            }
+
+            const float mouseX = static_cast<float>(clientPoint.x) / static_cast<float>(clientWidth);
+            const float mouseY = static_cast<float>(clientPoint.y) / static_cast<float>(clientHeight);
+
+            const float modSelectorRectX = kPanelPositionX + (kModSelectorPositionX * kPanelSizeX);
+            const float modSelectorRectY = kPanelPositionY + (kModSelectorPositionY * kPanelSizeY);
+            const float modSelectorRectWidth = kModSelectorSizeX * kPanelSizeX;
+            const float modSelectorRectHeight = kModSelectorSizeY * kPanelSizeY;
+            if (IsPointInsideRect(mouseX, mouseY, modSelectorRectX, modSelectorRectY, modSelectorRectWidth, modSelectorRectHeight)) {
+                state.modSelectorDropDownOpen = true;
+                state.activeEnumDropDownRowIndex = -1;
+                LogInfo("CoH Mod Config UI: Mod selector ComboBox body clicked.");
+                return true;
+            }
+
+            for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
+                if (state.rowActiveControlType[i] != CoHModSDKConfigType_Enum) {
+                    continue;
+                }
+
+                const float rowRectX = kPanelPositionX + (kRowControlPositionX * kPanelSizeX);
+                const float rowRectY = kPanelPositionY + ((kFirstRowPositionY + (static_cast<float>(i) * kRowSpacingY)) * kPanelSizeY);
+                const float rowRectWidth = kRowComboBoxSizeX * kPanelSizeX;
+                const float rowRectHeight = kRowComboBoxSizeY * kPanelSizeY;
+                if (IsPointInsideRect(mouseX, mouseY, rowRectX, rowRectY, rowRectWidth, rowRectHeight)) {
+                    state.modSelectorDropDownOpen = false;
+                    state.activeEnumDropDownRowIndex = static_cast<long>(i);
+                    LogInfo("CoH Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        struct CustomListBoxScrollRange {
+            float minValue = 0.0f;
+            float maxValue = 0.0f;
+        };
+
+        bool TryAdjustCustomListBoxScroll(State& state, void* listBoxWidget, std::size_t itemCount, int direction) {
+            if ((direction == 0) ||
+                (itemCount <= 4u) ||
+                (listBoxWidget == nullptr) ||
+                (state.widgetProxyBind == nullptr) ||
+                (state.customListBoxCtor == nullptr) ||
+                (state.customListBoxDtor == nullptr) ||
+                (state.customListBoxGetScrollPosition == nullptr) ||
+                (state.customListBoxGetScrollRange == nullptr) ||
+                (state.customListBoxSetScrollPosition == nullptr)) {
+                return false;
+            }
+
+            OpaqueCustomListBox listBoxProxy = {};
+            state.customListBoxCtor(listBoxProxy.Get());
+            state.widgetProxyBind(listBoxProxy.Get(), listBoxWidget);
+
+            const float currentPosition = state.customListBoxGetScrollPosition(listBoxProxy.Get());
+            const auto* range = reinterpret_cast<const CustomListBoxScrollRange*>(state.customListBoxGetScrollRange(listBoxProxy.Get()));
+            if (range == nullptr) {
+                state.customListBoxDtor(listBoxProxy.Get());
+                return false;
+            }
+
+            float rangeMin = range->minValue;
+            float rangeMax = range->maxValue;
+            if (rangeMax < rangeMin) {
+                std::swap(rangeMin, rangeMax);
+            }
+
+            const std::size_t visibleCount = (std::min)(itemCount, static_cast<std::size_t>(4u));
+            const std::size_t scrollStepCount = itemCount > visibleCount ? (itemCount - visibleCount) : 0u;
+            if (scrollStepCount == 0u) {
+                state.customListBoxDtor(listBoxProxy.Get());
+                return false;
+            }
+
+            const float rangeSpan = rangeMax - rangeMin;
+            const float scrollStep = (rangeSpan > 0.0f) ? (rangeSpan / static_cast<float>(scrollStepCount)) : 1.0f;
+            const float newPosition = std::clamp(
+                currentPosition + (direction > 0 ? scrollStep : -scrollStep),
+                rangeMin,
+                rangeMax
+            );
+            const bool changed = std::fabs(newPosition - currentPosition) > 0.0001f;
+            if (changed) {
+                state.customListBoxSetScrollPosition(listBoxProxy.Get(), newPosition);
+            }
+
+            state.customListBoxDtor(listBoxProxy.Get());
+            return changed;
+        }
+
+        bool TryScrollOpenDropDown(State& state, int direction) {
+            if (direction == 0) {
+                return false;
+            }
+
+            if (state.modSelectorDropDownOpen && (state.catalog != nullptr) && (state.modSelectorListBoxWidget != nullptr)) {
+                return TryAdjustCustomListBoxScroll(
+                    state,
+                    state.modSelectorListBoxWidget,
+                    state.catalog->GetModCount(),
+                    direction
+                );
+            }
+
+            if (state.activeEnumDropDownRowIndex >= 0) {
+                SelectedOptionRef rowOption = {};
+                if (TryGetVisibleRowOption(state, static_cast<std::size_t>(state.activeEnumDropDownRowIndex), rowOption) &&
+                    (rowOption.optionEntry != nullptr) &&
+                    (rowOption.optionEntry->type == CoHModSDKConfigType_Enum)) {
+                    return TryAdjustCustomListBoxScroll(
+                        state,
+                        state.rowListBoxWidgets[static_cast<std::size_t>(state.activeEnumDropDownRowIndex)],
+                        rowOption.optionEntry->choices.size(),
+                        direction
+                    );
+                }
+            }
+
+            return false;
+        }
+
+        bool TryHandlePanelScrollBarClick(State& state) {
+            if (!state.hasPendingLeftClick) {
+                return false;
+            }
+
+            state.hasPendingLeftClick = false;
+
+            SelectedOptionRef selectedOption = {};
+            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
+                return false;
+            }
+
+            if ((state.gameWindowHandle == nullptr) || !IsWindow(state.gameWindowHandle)) {
+                return false;
+            }
+
+            RECT clientRect = {};
+            if (!GetClientRect(state.gameWindowHandle, &clientRect)) {
+                return false;
+            }
+
+            const LONG clientWidth = clientRect.right - clientRect.left;
+            const LONG clientHeight = clientRect.bottom - clientRect.top;
+            if ((clientWidth <= 0) || (clientHeight <= 0)) {
+                return false;
+            }
+
+            const float clickX = static_cast<float>(state.pendingLeftClickClientPosition.x) / static_cast<float>(clientWidth);
+            const float clickY = static_cast<float>(state.pendingLeftClickClientPosition.y) / static_cast<float>(clientHeight);
+            const float trackX = kPanelPositionX + (kPanelScrollBarPositionX * kPanelSizeX);
+            const float trackY = kPanelPositionY + (kPanelScrollBarPositionY * kPanelSizeY);
+            const float trackWidth = kPanelScrollBarSizeX * kPanelSizeX;
+            const float trackHeight = kPanelScrollBarSizeY * kPanelSizeY;
+
+            if ((clickX < trackX) || (clickX > (trackX + trackWidth)) ||
+                (clickY < trackY) || (clickY > (trackY + trackHeight))) {
+                return false;
+            }
+
+            const std::size_t maxFirstVisibleIndex = selectedOption.optionCount - kVisibleRowCount;
+            const float visibleFraction =
+                static_cast<float>(kVisibleRowCount) /
+                static_cast<float>(selectedOption.optionCount);
+            const float thumbSizeLocalY = (std::min)(
+                (std::max)(kPanelScrollBarMinThumbSizeY, kPanelScrollBarSizeY * visibleFraction),
+                kPanelScrollBarSizeY
+            );
+            const float thumbSizeScreenY = thumbSizeLocalY * kPanelSizeY;
+            const float thumbTravelScreenY = (std::max)(0.0f, trackHeight - thumbSizeScreenY);
+            const float currentThumbProgress =
+                (maxFirstVisibleIndex == 0u) ?
+                0.0f :
+                (static_cast<float>(state.topVisibleOptionIndex) / static_cast<float>(maxFirstVisibleIndex));
+            const float currentThumbTop = thumbTravelScreenY * currentThumbProgress;
+
+            if ((clickY >= (trackY + currentThumbTop)) && (clickY <= (trackY + currentThumbTop + thumbSizeScreenY))) {
+                state.panelScrollBarDragOffsetY = clickY - (trackY + currentThumbTop);
+            }
+            else {
+                state.panelScrollBarDragOffsetY = thumbSizeScreenY * 0.5f;
+            }
+            state.panelScrollBarDragging = true;
+
+            const float targetThumbTop = clickY - trackY - state.panelScrollBarDragOffsetY;
+            const float progress =
+                (thumbTravelScreenY <= 0.0f) ?
+                0.0f :
+                std::clamp(targetThumbTop / thumbTravelScreenY, 0.0f, 1.0f);
+            const std::size_t newTopVisibleIndex = static_cast<std::size_t>(
+                std::lround(progress * static_cast<float>(maxFirstVisibleIndex))
+            );
+
+            LogInfo(
+                "CoH Mod Config UI: Panel scrollbar click observed at normalized position (" +
+                std::to_string(clickX) +
+                ", " +
+                std::to_string(clickY) +
+                ")."
+            );
+            return TrySetOptionWindowTop(state, newTopVisibleIndex);
+        }
+
+        bool TryHandlePanelScrollBarDrag(State& state) {
+            if (!state.panelScrollBarDragging || !state.hasPendingMouseMove) {
+                return false;
+            }
+
+            state.hasPendingMouseMove = false;
+
+            SelectedOptionRef selectedOption = {};
+            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
+                state.panelScrollBarDragging = false;
+                return false;
+            }
+
+            if ((state.gameWindowHandle == nullptr) || !IsWindow(state.gameWindowHandle)) {
+                state.panelScrollBarDragging = false;
+                return false;
+            }
+
+            RECT clientRect = {};
+            if (!GetClientRect(state.gameWindowHandle, &clientRect)) {
+                return false;
+            }
+
+            const LONG clientHeight = clientRect.bottom - clientRect.top;
+            if (clientHeight <= 0) {
+                return false;
+            }
+
+            const std::size_t maxFirstVisibleIndex = selectedOption.optionCount - kVisibleRowCount;
+            const float trackY = kPanelPositionY + (kPanelScrollBarPositionY * kPanelSizeY);
+            const float trackHeight = kPanelScrollBarSizeY * kPanelSizeY;
+            const float visibleFraction =
+                static_cast<float>(kVisibleRowCount) /
+                static_cast<float>(selectedOption.optionCount);
+            const float thumbSizeLocalY = (std::min)(
+                (std::max)(kPanelScrollBarMinThumbSizeY, kPanelScrollBarSizeY * visibleFraction),
+                kPanelScrollBarSizeY
+            );
+            const float thumbSizeScreenY = thumbSizeLocalY * kPanelSizeY;
+            const float thumbTravelScreenY = (std::max)(0.0f, trackHeight - thumbSizeScreenY);
+            const float mouseY = static_cast<float>(state.pendingMouseMoveClientPosition.y) / static_cast<float>(clientHeight);
+            const float targetThumbTop = mouseY - trackY - state.panelScrollBarDragOffsetY;
+            const float progress =
+                (thumbTravelScreenY <= 0.0f) ?
+                0.0f :
+                std::clamp(targetThumbTop / thumbTravelScreenY, 0.0f, 1.0f);
+            const std::size_t newTopVisibleIndex = static_cast<std::size_t>(
+                std::lround(progress * static_cast<float>(maxFirstVisibleIndex))
+            );
+            return TrySetOptionWindowTop(state, newTopVisibleIndex);
         }
 
         bool TryGetVisibleRowOption(State& state, std::size_t rowIndex, SelectedOptionRef& outSelectedOption) {
@@ -712,9 +1331,15 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
+            ModEntry* modEntry = nullptr;
+            std::size_t modIndex = 0u;
+            if (!TryGetSelectedMod(state, modEntry, modIndex) || (modEntry == nullptr)) {
+                return false;
+            }
+
             const std::size_t firstVisibleIndex = ComputeFirstVisibleIndex(state);
-            const std::size_t flatIndex = firstVisibleIndex + rowIndex;
-            return TryGetOptionByFlatIndex(*state.catalog, flatIndex, outSelectedOption);
+            const std::size_t optionIndex = firstVisibleIndex + rowIndex;
+            return TryGetOptionByIndexInMod(*modEntry, modIndex, optionIndex, outSelectedOption);
         }
 
         bool TryGetCurrentEnumChoiceIndex(const OptionEntry& optionEntry, long& outChoiceIndex) {
@@ -733,41 +1358,68 @@ namespace ConfigUi::Frontend {
             return false;
         }
 
-        bool TryMapEnumChoiceIndexToNativeListIndex(const OptionEntry& optionEntry, long choiceIndex, long& outNativeIndex) {
+        bool TryMapVisualIndexToNativeListIndex(std::size_t itemCount, long visualIndex, long& outNativeIndex) {
             outNativeIndex = -1;
-            if ((optionEntry.type != CoHModSDKConfigType_Enum) ||
-                optionEntry.choices.empty() ||
-                (choiceIndex < 0) ||
-                (choiceIndex >= static_cast<long>(optionEntry.choices.size()))) {
+            if ((itemCount == 0u) ||
+                (visualIndex < 0) ||
+                (visualIndex >= static_cast<long>(itemCount))) {
                 return false;
             }
 
-            outNativeIndex = static_cast<long>(optionEntry.choices.size() - 1u) - choiceIndex;
+            outNativeIndex = static_cast<long>(itemCount - 1u) - visualIndex;
             return true;
+        }
+
+        bool TryMapNativeListIndexToVisualIndex(std::size_t itemCount, long nativeIndex, long& outVisualIndex) {
+            outVisualIndex = -1;
+            if ((itemCount == 0u) ||
+                (nativeIndex < 0) ||
+                (nativeIndex >= static_cast<long>(itemCount))) {
+                return false;
+            }
+
+            outVisualIndex = static_cast<long>(itemCount - 1u) - nativeIndex;
+            return true;
+        }
+
+        bool TryMapEnumChoiceIndexToNativeListIndex(const OptionEntry& optionEntry, long choiceIndex, long& outNativeIndex) {
+            if (optionEntry.type != CoHModSDKConfigType_Enum) {
+                outNativeIndex = -1;
+                return false;
+            }
+
+            return TryMapVisualIndexToNativeListIndex(optionEntry.choices.size(), choiceIndex, outNativeIndex);
         }
 
         bool TryMapNativeListIndexToEnumChoiceIndex(const OptionEntry& optionEntry, long nativeIndex, long& outChoiceIndex) {
-            outChoiceIndex = -1;
-            if ((optionEntry.type != CoHModSDKConfigType_Enum) ||
-                optionEntry.choices.empty() ||
-                (nativeIndex < 0) ||
-                (nativeIndex >= static_cast<long>(optionEntry.choices.size()))) {
+            if (optionEntry.type != CoHModSDKConfigType_Enum) {
+                outChoiceIndex = -1;
                 return false;
             }
 
-            outChoiceIndex = static_cast<long>(optionEntry.choices.size() - 1u) - nativeIndex;
-            return true;
+            return TryMapNativeListIndexToVisualIndex(optionEntry.choices.size(), nativeIndex, outChoiceIndex);
         }
 
-        std::string BuildTitleText(const SelectedOptionRef* selectedOption) {
-            if (selectedOption == nullptr) {
+        std::string BuildModDisplayText(const ModEntry& modEntry) {
+            const std::string& sourceText = modEntry.displayName.empty() ? modEntry.modId : modEntry.displayName;
+            return TruncateText(sourceText, 32u);
+        }
+
+        std::string BuildTitleText(const ModEntry* selectedMod, const SelectedOptionRef* selectedOption) {
+            if (selectedMod == nullptr) {
                 return "Mod Options";
             }
 
+            const std::size_t optionCount = selectedMod->options.size();
+            const std::size_t currentIndex = selectedOption == nullptr ? 0u : (selectedOption->flatIndex + 1u);
             return "Mod Options  " +
-                std::to_string(selectedOption->flatIndex + 1u) +
+                std::to_string(currentIndex) +
                 "/" +
-                std::to_string(selectedOption->optionCount);
+                std::to_string(optionCount);
+        }
+
+        std::string BuildEmptyModSummaryText(const ModEntry& modEntry) {
+            return "No registered options for " + TruncateText(modEntry.modId, 48u) + ".";
         }
 
         std::string BuildSummaryText(const SelectedOptionRef& selectedOption) {
@@ -784,7 +1436,7 @@ namespace ConfigUi::Frontend {
             std::string label;
             label += TruncateText(
                 optionRef.optionEntry->label.empty() ? optionRef.optionEntry->optionId : optionRef.optionEntry->label,
-                22u
+                28u
             );
 
             if ((optionRef.optionEntry->flags & CoHModSDKConfigFlags_RestartRequired) != 0u) {
@@ -835,6 +1487,7 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1CustomWidget@UI@@UAE@XZ", state.customWidgetDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0ArtLabel@UI@@QAE@XZ", state.artLabelCtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1ArtLabel@UI@@UAE@XZ", state.artLabelDtor) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetAllArtVisible@ArtLabel@UI@@QAEX_N@Z", state.artLabelSetAllArtVisible) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0Button@UI@@QAE@XZ", state.buttonCtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1Button@UI@@UAE@XZ", state.buttonDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetText@Button@UI@@QAEXABVLocString@@@Z", state.buttonSetText) &&
@@ -890,6 +1543,9 @@ namespace ConfigUi::Frontend {
             ResolveOptionalExport(userInterfaceModule, "?DeleteAllItems@CustomListBox@UI@@QAEXXZ", state.customListBoxDeleteAllItems);
             ResolveOptionalExport(userInterfaceModule, "?SelectItem@CustomListBox@UI@@QAE_NJ@Z", state.customListBoxSelectItem);
             ResolveOptionalExport(userInterfaceModule, "?GetSelectedIndex@CustomListBox@UI@@QBEJXZ", state.customListBoxGetSelectedIndex);
+            ResolveOptionalExport(userInterfaceModule, "?GetScrollPosition@CustomListBox@UI@@QBEMXZ", state.customListBoxGetScrollPosition);
+            ResolveOptionalExport(userInterfaceModule, "?GetScrollRange@CustomListBox@UI@@QBEABVVector2f@Math@@XZ", state.customListBoxGetScrollRange);
+            ResolveOptionalExport(userInterfaceModule, "?SetScrollPosition@CustomListBox@UI@@QAEXM@Z", state.customListBoxSetScrollPosition);
             ResolveOptionalExport(userInterfaceModule, "?ScrollToTop@CustomListBox@UI@@QAEXXZ", state.customListBoxScrollToTop);
             ResolveOptionalExport(userInterfaceModule, "?GetOldCustomItem@CustomListBox@UI@@QAEPAVCustomListBoxItemOld@2@XZ", state.customListBoxGetOldCustomItem);
             ResolveOptionalExport(userInterfaceModule, "?Bind@CustomListBoxItemOld@UI@@QAEXABVWidgetProxy@2@PBDJ@Z", state.customListBoxItemOldBind);
@@ -1007,10 +1663,6 @@ namespace ConfigUi::Frontend {
             return state.screenGetRootWidget(screen);
         }
 
-        std::string BuildFooterText() {
-            return "F10 close";
-        }
-
         std::string BuildEmptyButtonText() {
             return " ";
         }
@@ -1021,6 +1673,38 @@ namespace ConfigUi::Frontend {
 
         std::string MakeRowButtonName(std::size_t rowIndex) {
             return std::string(kRowButtonNamePrefix) + std::to_string(rowIndex);
+        }
+
+        std::string MakeModSelectorComboBoxName() {
+            return kModSelectorComboBoxName;
+        }
+
+        std::string MakeModSelectorLabelName() {
+            return std::string("lbl_") + MakeModSelectorComboBoxName();
+        }
+
+        std::string MakeModSelectorButtonName() {
+            return std::string("btn_") + MakeModSelectorComboBoxName();
+        }
+
+        std::string MakeModSelectorListBoxName() {
+            return std::string("lstBox_") + MakeModSelectorComboBoxName();
+        }
+
+        std::string MakeModSelectorListBoxItemsName() {
+            return std::string("items_") + MakeModSelectorListBoxName();
+        }
+
+        std::string MakeModSelectorListBoxScrollBarName() {
+            return std::string("scrlBar_") + MakeModSelectorListBoxName();
+        }
+
+        std::string MakeModSelectorListBoxItemTemplateName() {
+            return std::string("itemTmplt_") + MakeModSelectorListBoxName();
+        }
+
+        std::string MakeModSelectorListItemName(std::size_t modIndex) {
+            return std::string("cohmodconfigui_moditem_") + std::to_string(modIndex);
         }
 
         std::string MakeRowComboBoxName(std::size_t rowIndex) {
@@ -1122,8 +1806,19 @@ namespace ConfigUi::Frontend {
             state.rootWidgetRaw = nullptr;
             state.panelWidgetRaw = nullptr;
             state.titleLabelRaw = nullptr;
+            state.panelScrollBarWidget = nullptr;
+            state.panelScrollBarTrackVisualWidget = nullptr;
+            state.panelScrollBarThumbVisualWidget = nullptr;
+            state.panelScrollBarDecButtonWidget = nullptr;
+            state.panelScrollBarIncButtonWidget = nullptr;
+            state.panelScrollBarTrackButtonWidget = nullptr;
+            state.panelScrollBarPageDownButtonWidget = nullptr;
+            state.panelScrollBarPageUpButtonWidget = nullptr;
+            state.modSelectorComboBoxWidget = nullptr;
+            state.modSelectorListBoxWidget = nullptr;
+            state.modSelectorValueLabelWidget = nullptr;
+            state.modSelectorArrowButtonWidget = nullptr;
             state.summaryLabelRaw = nullptr;
-            state.footerLabelRaw = nullptr;
             state.rowLabelWidgets.fill(nullptr);
             state.rowComboBoxWidgets.fill(nullptr);
             state.rowListBoxWidgets.fill(nullptr);
@@ -1133,11 +1828,24 @@ namespace ConfigUi::Frontend {
             state.rowSliderWidgets.fill(nullptr);
             state.rowSliderButtonWidgets.fill(nullptr);
             state.rowSliderBarWidgets.fill(nullptr);
+            state.rowComboBoxWasActive.fill(false);
+            state.rowValueLabelWasActive.fill(false);
             state.rowNativeSliderInitialized.fill(false);
             state.rowObservedSliderProgress.fill(0.0f);
             state.rowHasObservedSliderProgress.fill(false);
             state.rowObservedListBoxSelection.fill(-1);
             state.rowHasObservedListBoxSelection.fill(false);
+            state.rowArrowButtonWasActive.fill(false);
+            state.rowCheckButtonWasActive.fill(false);
+            state.modSelectorComboBoxWasActive = false;
+            state.modSelectorValueLabelWasActive = false;
+            state.modSelectorArrowButtonWasActive = false;
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
+            state.panelScrollBarPageDownWasActive = false;
+            state.panelScrollBarPageUpWasActive = false;
+            state.observedModListSelection = -1;
+            state.hasObservedModListSelection = false;
             state.rowActiveControlType.fill(CoHModSDKConfigType_Bool);
         }
 
@@ -1229,6 +1937,34 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
+        bool BindArtLabelProxy(State& state, OpaqueArtLabel& artLabel, void* rawWidget) {
+            if ((rawWidget == nullptr) || (state.artLabelCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
+                return false;
+            }
+
+            state.artLabelCtor(artLabel.Get());
+            state.widgetProxyBind(artLabel.Get(), rawWidget);
+            return true;
+        }
+
+        constexpr float PanelLocalToScreenX(float localX) {
+            return kPanelPositionX + (localX * kPanelSizeX);
+        }
+
+        constexpr float PanelLocalToScreenY(float localY) {
+            return kPanelPositionY + (localY * kPanelSizeY);
+        }
+
+        constexpr float PanelLocalToScreenWidth(float localWidth) {
+            return localWidth * kPanelSizeX;
+        }
+
+        constexpr float PanelLocalToScreenHeight(float localHeight) {
+            return localHeight * kPanelSizeY;
+        }
+
+        void ApplyWidgetProxyState(State& state, void* widgetProxy);
+
         bool SetRawWidgetVisible(State& state, void* rawWidget, bool visible) {
             if ((rawWidget == nullptr) ||
                 (state.genericWidgetCtor == nullptr) ||
@@ -1242,6 +1978,22 @@ namespace ConfigUi::Frontend {
             state.genericWidgetCtor(widgetProxy.Get());
             state.widgetProxyBind(widgetProxy.Get(), rawWidget);
             state.widgetProxySetVisible(widgetProxy.Get(), visible);
+            state.genericWidgetDtor(widgetProxy.Get());
+            return true;
+        }
+
+        bool ApplyRawWidgetState(State& state, void* rawWidget) {
+            if ((rawWidget == nullptr) ||
+                (state.genericWidgetCtor == nullptr) ||
+                (state.genericWidgetDtor == nullptr) ||
+                (state.widgetProxyBind == nullptr)) {
+                return false;
+            }
+
+            OpaqueGenericWidget widgetProxy = {};
+            state.genericWidgetCtor(widgetProxy.Get());
+            state.widgetProxyBind(widgetProxy.Get(), rawWidget);
+            ApplyWidgetProxyState(state, widgetProxy.Get());
             state.genericWidgetDtor(widgetProxy.Get());
             return true;
         }
@@ -1416,11 +2168,11 @@ namespace ConfigUi::Frontend {
         bool AttachRenderChild(State& state, void* parentWidget, void* childWidget);
         bool TrySetTextLabel(State& state, OpaqueTextLabel& textLabel, const std::string& text, bool multiline);
 
-        bool EnsureDropdownListItemLabel(
+        bool EnsureListItemDirectText(
             State& state,
             void* itemWidget,
-            std::size_t rowIndex,
-            std::size_t choiceIndex,
+            const std::string& contextLabel,
+            const std::string& itemName,
             const std::string& displayText
         ) {
             constexpr int kTextLabelExtensionId = 7;
@@ -1429,10 +2181,10 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            const std::string itemName = MakeRowComboBoxListItemName(rowIndex, choiceIndex);
             if (FindWidgetExtensionObject(state, itemWidget, kTextLabelExtensionId) == nullptr) {
                 LogWarning(
-                    "CoH Mod Config UI: List item '" +
+                    "CoH Mod Config UI: " + contextLabel +
+                    " list item '" +
                     itemName +
                     "' has no text extension for direct fallback text binding."
                 );
@@ -1442,7 +2194,8 @@ namespace ConfigUi::Frontend {
             OpaqueTextLabel textLabel = {};
             if (!BindTextLabelProxy(state, textLabel, itemWidget)) {
                 LogWarning(
-                    "CoH Mod Config UI: Failed to bind direct fallback text proxy for list item '" +
+                    "CoH Mod Config UI: Failed to bind direct fallback text proxy for " + contextLabel +
+                    " list item '" +
                     itemName +
                     "'."
                 );
@@ -1456,7 +2209,8 @@ namespace ConfigUi::Frontend {
 
             if (textSet) {
                 LogInfo(
-                    "CoH Mod Config UI: Set direct fallback text on list item '" +
+                    "CoH Mod Config UI: Set direct fallback text on " + contextLabel +
+                    " list item '" +
                     itemName +
                     "' to '" +
                     displayText +
@@ -1464,7 +2218,8 @@ namespace ConfigUi::Frontend {
                 );
             } else {
                 LogWarning(
-                    "CoH Mod Config UI: Failed to set direct fallback text on list item '" +
+                    "CoH Mod Config UI: Failed to set direct fallback text on " + contextLabel +
+                    " list item '" +
                     itemName +
                     "'."
                 );
@@ -1476,7 +2231,7 @@ namespace ConfigUi::Frontend {
         bool TryResolveListItemTextSubItemIndex(
             State& state,
             void* itemWidget,
-            std::size_t rowIndex,
+            const std::string& contextLabel,
             const std::string& itemName,
             long& outSubItemIndex
         ) {
@@ -1495,7 +2250,7 @@ namespace ConfigUi::Frontend {
             const void* const subItemListExtension = FindWidgetExtensionObject(state, itemWidget, kItemSubItemListExtensionId);
             if (subItemListExtension == nullptr) {
                 LogWarning(
-                    "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
+                    "CoH Mod Config UI: " + contextLabel +
                     " list item '" + itemName +
                     "' has no extension 17 child list; falling back to subitem index 0."
                 );
@@ -1509,7 +2264,7 @@ namespace ConfigUi::Frontend {
             const long childCount = *reinterpret_cast<const long*>(extensionBase + kExtensionChildCountOffset);
 
             LogInfo(
-                "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
+                "CoH Mod Config UI: " + contextLabel +
                 " list item '" + itemName +
                 "' exposes " + std::to_string(childCount) +
                 " subitems via extension 17."
@@ -1517,7 +2272,7 @@ namespace ConfigUi::Frontend {
 
             if ((childWidgets == nullptr) || (childCount <= 0) || (childCount > kMaxExpectedSubItemCount)) {
                 LogWarning(
-                    "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
+                    "CoH Mod Config UI: " + contextLabel +
                     " list item '" + itemName +
                     "' reported an invalid subitem list; falling back to subitem index 0."
                 );
@@ -1529,7 +2284,7 @@ namespace ConfigUi::Frontend {
                 const bool childHasTextExtension =
                     FindWidgetExtensionObject(state, childWidget, kTextLabelExtensionId) != nullptr;
                 LogInfo(
-                    "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
+                    "CoH Mod Config UI: " + contextLabel +
                     " list item '" + itemName +
                     "' subitem[" + std::to_string(childIndex) +
                     "]='" + ReadWidgetNameForLog(childWidget) +
@@ -1543,7 +2298,7 @@ namespace ConfigUi::Frontend {
             }
 
             LogWarning(
-                "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
+                "CoH Mod Config UI: " + contextLabel +
                 " list item '" + itemName +
                 "' exposed no text-capable subitem; falling back to subitem index 0."
             );
@@ -1606,6 +2361,7 @@ namespace ConfigUi::Frontend {
             long selectedChoiceIndex = 0;
             long listItemTextSubItemIndex = 0;
             bool listItemTextSubItemIndexResolved = false;
+            const std::string contextLabel = "row " + std::to_string(rowIndex);
             for (std::size_t choiceIndex = 0u; choiceIndex < optionEntry.choices.size(); ++choiceIndex) {
                 const ChoiceEntry& choiceEntry = optionEntry.choices[choiceIndex];
                 const std::string itemName = MakeRowComboBoxListItemName(rowIndex, choiceIndex);
@@ -1630,7 +2386,7 @@ namespace ConfigUi::Frontend {
                         listItemTextSubItemIndexResolved = TryResolveListItemTextSubItemIndex(
                             state,
                             itemWidget,
-                            rowIndex,
+                            contextLabel,
                             itemName,
                             listItemTextSubItemIndex
                         );
@@ -1654,11 +2410,11 @@ namespace ConfigUi::Frontend {
                     state.customListBoxItemOldSetText(oldItemProxy, locString.Get());
                     usedNativeItemTextPath = true;
                 } else if (addResult >= 0 && itemWidget != nullptr) {
-                    const bool usedFallbackLabel = EnsureDropdownListItemLabel(
+                    const bool usedFallbackLabel = EnsureListItemDirectText(
                         state,
                         itemWidget,
-                        rowIndex,
-                        choiceIndex,
+                        contextLabel,
+                        itemName,
                         displayText
                     );
                     if (!usedFallbackLabel) {
@@ -1716,10 +2472,212 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
+        bool PopulateModListBox(State& state) {
+            if ((state.catalog == nullptr) ||
+                (state.modSelectorListBoxWidget == nullptr) ||
+                (state.widgetProxyBind == nullptr) ||
+                (state.locStringCtor == nullptr) ||
+                (state.locStringDtor == nullptr) ||
+                (state.customListBoxCtor == nullptr) ||
+                (state.customListBoxDtor == nullptr) ||
+                (state.customListBoxAddItem == nullptr) ||
+                (state.customListBoxDeleteAllItems == nullptr) ||
+                (state.customListBoxSelectItem == nullptr) ||
+                (state.customListBoxGetOldCustomItem == nullptr) ||
+                (state.customListBoxItemOldBind == nullptr) ||
+                (state.customListBoxItemOldSetText == nullptr)) {
+                return false;
+            }
+
+            OpaqueCustomListBox listBoxProxy = {};
+            state.customListBoxCtor(listBoxProxy.Get());
+            state.widgetProxyBind(listBoxProxy.Get(), state.modSelectorListBoxWidget);
+            LogInfo("CoH Mod Config UI: Bound CustomListBox proxy for mod selector.");
+
+            void* const oldItemProxy = state.customListBoxGetOldCustomItem(listBoxProxy.Get());
+            if (oldItemProxy == nullptr) {
+                LogWarning("CoH Mod Config UI: CustomListBox returned null old-item proxy for mod selector.");
+                state.customListBoxDtor(listBoxProxy.Get());
+                return false;
+            }
+
+            state.customListBoxDeleteAllItems(listBoxProxy.Get());
+            LogInfo("CoH Mod Config UI: Cleared existing mod selector CustomListBox items.");
+
+            const std::vector<ModEntry>& mods = state.catalog->GetMods();
+            if (!mods.empty() && (state.selectedModIndex >= mods.size())) {
+                state.selectedModIndex = mods.size() - 1u;
+            }
+            long listItemTextSubItemIndex = 0;
+            bool listItemTextSubItemIndexResolved = false;
+            for (std::size_t modIndex = 0u; modIndex < mods.size(); ++modIndex) {
+                const std::string itemName = MakeModSelectorListItemName(modIndex);
+                const std::string displayText = BuildModDisplayText(mods[modIndex]);
+                const std::wstring wideText = ToWide(displayText);
+                OpaqueLocString locString = {};
+                state.locStringCtor(locString.Get(), wideText.c_str());
+                const long addResult = state.customListBoxAddItem(listBoxProxy.Get(), itemName.c_str(), true);
+                void* const itemWidget = FindNamedWidget(state, state.modSelectorListBoxWidget, itemName.c_str());
+                if (!listItemTextSubItemIndexResolved && (itemWidget != nullptr)) {
+                    listItemTextSubItemIndexResolved = TryResolveListItemTextSubItemIndex(
+                        state,
+                        itemWidget,
+                        "mod selector",
+                        itemName,
+                        listItemTextSubItemIndex
+                    );
+                }
+
+                LogInfo(
+                    "CoH Mod Config UI: Mod selector CustomListBox::AddItem added '" + itemName +
+                    "' with result " + std::to_string(addResult) +
+                    ", text subitem index " + std::to_string(listItemTextSubItemIndex) +
+                    ", display text '" + displayText + "'."
+                );
+
+                if ((addResult >= 0) && listItemTextSubItemIndexResolved) {
+                    state.customListBoxItemOldBind(
+                        oldItemProxy,
+                        listBoxProxy.Get(),
+                        itemName.c_str(),
+                        listItemTextSubItemIndex
+                    );
+                    state.customListBoxItemOldSetText(oldItemProxy, locString.Get());
+                } else if ((addResult >= 0) && (itemWidget != nullptr)) {
+                    EnsureListItemDirectText(
+                        state,
+                        itemWidget,
+                        "mod selector",
+                        itemName,
+                        displayText
+                    );
+                }
+
+                state.locStringDtor(locString.Get());
+            }
+
+            long selectedNativeIndex = -1;
+            if (!mods.empty() &&
+                !TryMapVisualIndexToNativeListIndex(mods.size(), static_cast<long>(state.selectedModIndex), selectedNativeIndex)) {
+                selectedNativeIndex = static_cast<long>(state.selectedModIndex);
+            }
+            if (selectedNativeIndex >= 0) {
+                state.customListBoxSelectItem(listBoxProxy.Get(), selectedNativeIndex);
+            }
+            if (state.customListBoxScrollToTop != nullptr) {
+                state.customListBoxScrollToTop(listBoxProxy.Get());
+            }
+            state.customListBoxDtor(listBoxProxy.Get());
+
+            LogInfo(
+                "CoH Mod Config UI: Populated mod selector list box with " +
+                std::to_string(mods.size()) +
+                " mods; selected mod index=" +
+                std::to_string(state.selectedModIndex) +
+                ", native selected index=" +
+                std::to_string(selectedNativeIndex) +
+                "."
+            );
+            return true;
+        }
+
+        float ComputeListBoxHeightFromItemCount(std::size_t itemCount, float itemHeight) {
+            const std::size_t effectiveItemCount = itemCount == 0u ? 1u : itemCount;
+            const std::size_t visibleRowCount = (std::min)(effectiveItemCount, static_cast<std::size_t>(4u));
+            return itemHeight * static_cast<float>(visibleRowCount);
+        }
+
         float ComputeRowListBoxHeight(const OptionEntry& optionEntry) {
-            const std::size_t choiceCount = optionEntry.choices.empty() ? 1u : optionEntry.choices.size();
-            const std::size_t visibleRowCount = (std::min)(choiceCount, static_cast<std::size_t>(4u));
-            return kRowComboBoxSizeY * static_cast<float>(visibleRowCount);
+            return ComputeListBoxHeightFromItemCount(optionEntry.choices.size(), kRowComboBoxSizeY);
+        }
+
+        void ConfigureModSelectorListBoxGeometry(State& state) {
+            if ((state.catalog == nullptr) ||
+                (state.modSelectorComboBoxWidget == nullptr) ||
+                (state.modSelectorListBoxWidget == nullptr)) {
+                return;
+            }
+
+            const std::size_t modCount = state.catalog->GetModCount();
+            const bool needsScrollBar = modCount > 4u;
+            const float listBoxSizeY = ComputeListBoxHeightFromItemCount(modCount, kModSelectorSizeY);
+            const float listBoxSizeX = needsScrollBar ? kModSelectorListBoxSizeX : kModSelectorListBoxContentSizeX;
+            const float listContentSizeX = kModSelectorListBoxContentSizeX;
+            const float scrollBarPositionX = kModSelectorListBoxContentSizeX;
+            const float scrollBarSizeX = needsScrollBar ? kModSelectorListBoxScrollBarSizeX : 0.0f;
+
+            const std::string listBoxName = MakeModSelectorListBoxName();
+            const std::string itemsName = MakeModSelectorListBoxItemsName();
+            const std::string scrollBarName = MakeModSelectorListBoxScrollBarName();
+            const std::string itemTemplateName = MakeModSelectorListBoxItemTemplateName();
+
+            ConfigureRawWidget(
+                state,
+                state.modSelectorListBoxWidget,
+                listBoxName.c_str(),
+                kModSelectorListBoxPositionX,
+                kModSelectorListBoxPositionY,
+                listBoxSizeX,
+                listBoxSizeY,
+                state.modSelectorComboBoxWidget
+            );
+
+            void* listItemsWidget = nullptr;
+            void* listScrollBarWidget = nullptr;
+            void* listItemTemplateWidget = nullptr;
+            if (!ResolveListBoxChildWidgets(
+                state,
+                state.modSelectorListBoxWidget,
+                listBoxName,
+                listItemsWidget,
+                listScrollBarWidget,
+                listItemTemplateWidget
+            )) {
+                LogWarning("CoH Mod Config UI: Failed to reconfigure mod selector list box geometry.");
+                return;
+            }
+
+            ConfigureRawWidget(
+                state,
+                listItemsWidget,
+                itemsName.c_str(),
+                0.0f,
+                0.0f,
+                listContentSizeX,
+                listBoxSizeY,
+                state.modSelectorListBoxWidget
+            );
+            ConfigureRawWidget(
+                state,
+                listScrollBarWidget,
+                scrollBarName.c_str(),
+                scrollBarPositionX,
+                0.0f,
+                scrollBarSizeX,
+                listBoxSizeY,
+                state.modSelectorListBoxWidget
+            );
+            ConfigureRawWidget(
+                state,
+                listItemTemplateWidget,
+                itemTemplateName.c_str(),
+                0.0f,
+                0.0f,
+                listContentSizeX,
+                kModSelectorSizeY,
+                state.modSelectorListBoxWidget
+            );
+
+            SetRawWidgetVisible(state, listScrollBarWidget, needsScrollBar);
+            LogInfo(
+                "CoH Mod Config UI: Configured mod selector list box height for " +
+                std::to_string(modCount) +
+                " mods to " +
+                std::to_string(listBoxSizeY) +
+                " with scrollbar " +
+                (needsScrollBar ? std::string("visible") : std::string("hidden")) +
+                "."
+            );
         }
 
         void ConfigureRowListBoxGeometry(State& state, std::size_t rowIndex, const OptionEntry& optionEntry) {
@@ -1817,6 +2775,147 @@ namespace ConfigUi::Frontend {
                 (needsScrollBar ? std::string("visible") : std::string("hidden")) +
                 "." 
             );
+        }
+
+        void ConfigurePanelScrollBarGeometry(State& state) {
+            if ((state.panelScrollBarWidget == nullptr) ||
+                (state.panelScrollBarTrackButtonWidget == nullptr) ||
+                (state.panelScrollBarPageDownButtonWidget == nullptr) ||
+                (state.panelScrollBarPageUpButtonWidget == nullptr) ||
+                (state.panelWidgetRaw == nullptr)) {
+                return;
+            }
+
+            const std::string scrollBarName = kPanelScrollBarName;
+            const std::string decName = std::string("btnDec_") + scrollBarName;
+            const std::string incName = std::string("btnInc_") + scrollBarName;
+            const std::string trackName = std::string("btnTrk_") + scrollBarName;
+            const std::string pageDownName = std::string("btnPgDn_") + scrollBarName;
+            const std::string pageUpName = std::string("btnPgUp_") + scrollBarName;
+
+            ConfigureRawWidget(
+                state,
+                state.panelScrollBarWidget,
+                scrollBarName.c_str(),
+                kPanelScrollBarPositionX,
+                kPanelScrollBarPositionY,
+                kPanelScrollBarSizeX,
+                kPanelScrollBarSizeY,
+                state.panelWidgetRaw
+            );
+
+            SelectedOptionRef selectedOption = {};
+            const bool needsScrollBar =
+                TryGetSelectedOption(state, selectedOption) &&
+                (selectedOption.optionCount > kVisibleRowCount);
+
+            if (!needsScrollBar) {
+                ConfigureRawWidget(state, state.panelScrollBarDecButtonWidget, decName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+                ConfigureRawWidget(state, state.panelScrollBarIncButtonWidget, incName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+                ConfigureRawWidget(state, state.panelScrollBarTrackButtonWidget, trackName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+                ConfigureRawWidget(state, state.panelScrollBarPageDownButtonWidget, pageDownName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+                ConfigureRawWidget(state, state.panelScrollBarPageUpButtonWidget, pageUpName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+                state.panelScrollBarPageDownWasActive = false;
+                state.panelScrollBarPageUpWasActive = false;
+                SetRawWidgetVisible(state, state.panelScrollBarWidget, false);
+                if (state.panelScrollBarTrackVisualWidget != nullptr) {
+                    SetRawWidgetVisible(state, state.panelScrollBarTrackVisualWidget, false);
+                }
+                if (state.panelScrollBarThumbVisualWidget != nullptr) {
+                    SetRawWidgetVisible(state, state.panelScrollBarThumbVisualWidget, false);
+                }
+                return;
+            }
+
+            ClampTopVisibleOptionIndex(state);
+            const std::size_t maxFirstVisibleIndex = selectedOption.optionCount - kVisibleRowCount;
+            const float visibleFraction =
+                static_cast<float>(kVisibleRowCount) /
+                static_cast<float>(selectedOption.optionCount);
+            float thumbSizeY = (std::max)(kPanelScrollBarMinThumbSizeY, kPanelScrollBarSizeY * visibleFraction);
+            thumbSizeY = (std::min)(thumbSizeY, kPanelScrollBarSizeY);
+
+            const float thumbTravelY = (std::max)(0.0f, kPanelScrollBarSizeY - thumbSizeY);
+            const float thumbProgress =
+                (maxFirstVisibleIndex == 0u) ?
+                0.0f :
+                (static_cast<float>(state.topVisibleOptionIndex) / static_cast<float>(maxFirstVisibleIndex));
+            const float thumbPositionY = thumbTravelY * thumbProgress;
+            const float pageUpSizeY = thumbPositionY;
+            const float pageDownPositionY = thumbPositionY + thumbSizeY;
+            const float pageDownSizeY = (std::max)(0.0f, kPanelScrollBarSizeY - pageDownPositionY);
+
+            ConfigureRawWidget(state, state.panelScrollBarDecButtonWidget, decName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+            ConfigureRawWidget(state, state.panelScrollBarIncButtonWidget, incName.c_str(), 0.0f, 0.0f, 0.0f, 0.0f, state.panelScrollBarWidget);
+            ConfigureRawWidget(
+                state,
+                state.panelScrollBarTrackButtonWidget,
+                trackName.c_str(),
+                0.0f,
+                thumbPositionY,
+                kPanelScrollBarSizeX,
+                thumbSizeY,
+                state.panelScrollBarWidget
+            );
+            ConfigureRawWidget(
+                state,
+                state.panelScrollBarPageUpButtonWidget,
+                pageUpName.c_str(),
+                0.0f,
+                0.0f,
+                kPanelScrollBarSizeX,
+                pageUpSizeY,
+                state.panelScrollBarWidget
+            );
+            ConfigureRawWidget(
+                state,
+                state.panelScrollBarPageDownButtonWidget,
+                pageDownName.c_str(),
+                0.0f,
+                pageDownPositionY,
+                kPanelScrollBarSizeX,
+                pageDownSizeY,
+                state.panelScrollBarWidget
+            );
+
+            ApplyRawWidgetState(state, state.panelScrollBarWidget);
+            ApplyRawWidgetState(state, state.panelScrollBarTrackButtonWidget);
+            ApplyRawWidgetState(state, state.panelScrollBarPageUpButtonWidget);
+            ApplyRawWidgetState(state, state.panelScrollBarPageDownButtonWidget);
+            SetRawWidgetVisible(state, state.panelScrollBarWidget, true);
+            SetRawWidgetVisible(state, state.panelScrollBarDecButtonWidget, false);
+            SetRawWidgetVisible(state, state.panelScrollBarIncButtonWidget, false);
+            SetRawWidgetVisible(state, state.panelScrollBarTrackButtonWidget, true);
+            SetRawWidgetVisible(state, state.panelScrollBarPageUpButtonWidget, true);
+            SetRawWidgetVisible(state, state.panelScrollBarPageDownButtonWidget, true);
+            if (state.panelScrollBarTrackVisualWidget != nullptr) {
+                ConfigureRawWidget(
+                    state,
+                    state.panelScrollBarTrackVisualWidget,
+                    kPanelScrollBarTrackVisualName,
+                    PanelLocalToScreenX(kPanelScrollBarPositionX),
+                    PanelLocalToScreenY(kPanelScrollBarPositionY),
+                    PanelLocalToScreenWidth(kPanelScrollBarSizeX),
+                    PanelLocalToScreenHeight(kPanelScrollBarSizeY),
+                    state.rootWidgetRaw
+                );
+                ApplyRawWidgetState(state, state.panelScrollBarTrackVisualWidget);
+                SetRawWidgetVisible(state, state.panelScrollBarTrackVisualWidget, true);
+            }
+            if (state.panelScrollBarThumbVisualWidget != nullptr) {
+                ConfigureRawWidget(
+                    state,
+                    state.panelScrollBarThumbVisualWidget,
+                    kPanelScrollBarThumbVisualName,
+                    PanelLocalToScreenX(kPanelScrollBarPositionX),
+                    PanelLocalToScreenY(kPanelScrollBarPositionY + thumbPositionY),
+                    PanelLocalToScreenWidth(kPanelScrollBarSizeX),
+                    PanelLocalToScreenHeight(thumbSizeY),
+                    state.rootWidgetRaw
+                );
+                ApplyRawWidgetState(state, state.panelScrollBarThumbVisualWidget);
+                SetRawWidgetVisible(state, state.panelScrollBarThumbVisualWidget, true);
+            }
         }
 
         float ComputeNumericOptionProgress(const OptionEntry& optionEntry) {
@@ -2554,57 +3653,7 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Title label created and attached.");
 
-            // Step 8: Create summary TextLabel with donor Presentation, attach to panel.
-            state.summaryLabelRaw = CreateRawWidgetByType(state, kTextLabelWidgetTypeName);
-            if (state.summaryLabelRaw == nullptr) {
-                LogError("CoH Mod Config UI: Failed to create summary TextLabel widget.");
-                return false;
-            }
-            if (!TransferDonorPresentationDirect(state, state.summaryLabelRaw, donorScreen, kTemplateLabelWidgetName)) {
-                LogWarning("CoH Mod Config UI: Failed to transfer summary Presentation from donor.");
-            }
-            ConfigureRawWidget(
-                state,
-                state.summaryLabelRaw,
-                kSummaryLabelName,
-                kSummaryPositionX,
-                kSummaryPositionY,
-                kSummarySizeX,
-                kSummarySizeY,
-                state.panelWidgetRaw
-            );
-            if (!AttachRenderChild(state, state.panelWidgetRaw, state.summaryLabelRaw)) {
-                LogError("CoH Mod Config UI: Failed to attach summary label to panel render tree.");
-                return false;
-            }
-            LogInfo("CoH Mod Config UI: Summary label created and attached.");
-
-            // Step 9: Create footer TextLabel with donor Presentation, attach to panel.
-            state.footerLabelRaw = CreateRawWidgetByType(state, kTextLabelWidgetTypeName);
-            if (state.footerLabelRaw == nullptr) {
-                LogError("CoH Mod Config UI: Failed to create footer TextLabel widget.");
-                return false;
-            }
-            if (!TransferDonorPresentationDirect(state, state.footerLabelRaw, donorScreen, kTemplateLabelWidgetName)) {
-                LogWarning("CoH Mod Config UI: Failed to transfer footer Presentation from donor.");
-            }
-            ConfigureRawWidget(
-                state,
-                state.footerLabelRaw,
-                kFooterLabelName,
-                kFooterPositionX,
-                kFooterPositionY,
-                kFooterSizeX,
-                kFooterSizeY,
-                state.panelWidgetRaw
-            );
-            if (!AttachRenderChild(state, state.panelWidgetRaw, state.footerLabelRaw)) {
-                LogError("CoH Mod Config UI: Failed to attach footer label to panel render tree.");
-                return false;
-            }
-            LogInfo("CoH Mod Config UI: Footer label created and attached.");
-
-            // Step 10: Create row name TextLabels and attach them to the panel.
+            // Step 8: Create row name TextLabels and attach them to the panel.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 state.rowLabelWidgets[i] = CreateRawWidgetByType(state, kTextLabelWidgetTypeName);
                 if (state.rowLabelWidgets[i] == nullptr) {
@@ -2633,7 +3682,7 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Row label widgets created and attached.");
 
-            // Step 11: Resolve native CheckButton widgets preloaded by cohmodconfigui.screen.
+            // Step 9: Resolve native CheckButton widgets preloaded by cohmodconfigui.screen.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 const std::string rowCheckButtonName = MakeRowCheckButtonName(i);
                 state.rowCheckButtonWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowCheckButtonName.c_str(), 0);
@@ -2670,7 +3719,7 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Row bool CheckButton widgets resolved from the active screen.");
 
-            // Step 12: Resolve native slider widgets preloaded by cohmodconfigui.screen for int/float rows.
+            // Step 10: Resolve native slider widgets preloaded by cohmodconfigui.screen for int/float rows.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 const std::string rowSliderName = MakeRowSliderName(i);
                 const std::string rowSliderButtonName = MakeRowSliderButtonName(i);
@@ -2759,7 +3808,128 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            // Step 13: Create native ComboBox widgets for enum rows and resolve their child widgets.
+            state.panelScrollBarWidget = CreateRawWidgetByType(state, kScrollBarWidgetTypeName);
+            if (state.panelScrollBarWidget == nullptr) {
+                LogError("CoH Mod Config UI: Failed to create the panel ScrollBar widget.");
+                return false;
+            }
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar Presentation from donor.");
+            }
+            ConfigureRawWidget(
+                state,
+                state.panelScrollBarWidget,
+                kPanelScrollBarName,
+                kPanelScrollBarPositionX,
+                kPanelScrollBarPositionY,
+                kPanelScrollBarSizeX,
+                kPanelScrollBarSizeY,
+                state.panelWidgetRaw
+            );
+            if (!AttachRenderChild(state, state.panelWidgetRaw, state.panelScrollBarWidget)) {
+                LogError("CoH Mod Config UI: Failed to attach the panel ScrollBar widget to the panel render tree.");
+                return false;
+            }
+            if (!ResolveScrollBarChildWidgets(
+                state,
+                state.panelScrollBarWidget,
+                kPanelScrollBarName,
+                state.panelScrollBarDecButtonWidget,
+                state.panelScrollBarIncButtonWidget,
+                state.panelScrollBarTrackButtonWidget,
+                state.panelScrollBarPageDownButtonWidget,
+                state.panelScrollBarPageUpButtonWidget
+            )) {
+                LogError("CoH Mod Config UI: Failed to resolve the panel ScrollBar subtree widgets.");
+                return false;
+            }
+            LogInfo(
+                "CoH Mod Config UI: Panel ScrollBar child widgets resolved as dec='" +
+                ReadWidgetNameForLog(state.panelScrollBarDecButtonWidget) +
+                "', inc='" +
+                ReadWidgetNameForLog(state.panelScrollBarIncButtonWidget) +
+                "', track='" +
+                ReadWidgetNameForLog(state.panelScrollBarTrackButtonWidget) +
+                "', pgDn='" +
+                ReadWidgetNameForLog(state.panelScrollBarPageDownButtonWidget) +
+                "', pgUp='" +
+                ReadWidgetNameForLog(state.panelScrollBarPageUpButtonWidget) +
+                "'."
+            );
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarDecButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar decrement button Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarIncButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar increment button Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarTrackButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar track Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarPageDownButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar page-down Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarPageUpButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar page-up Presentation from donor.");
+            }
+            SetRawWidgetVisible(state, state.panelScrollBarWidget, false);
+            state.panelScrollBarTrackVisualWidget = FindNamedWidget(state, state.rootWidgetRaw, kPanelScrollBarTrackVisualName);
+            state.panelScrollBarThumbVisualWidget = FindNamedWidget(state, state.rootWidgetRaw, kPanelScrollBarThumbVisualName);
+            if ((state.panelScrollBarTrackVisualWidget != nullptr) &&
+                (state.panelScrollBarThumbVisualWidget != nullptr)) {
+                ConfigureRawWidget(
+                    state,
+                    state.panelScrollBarTrackVisualWidget,
+                    kPanelScrollBarTrackVisualName,
+                    PanelLocalToScreenX(kPanelScrollBarPositionX),
+                    PanelLocalToScreenY(kPanelScrollBarPositionY),
+                    PanelLocalToScreenWidth(kPanelScrollBarSizeX),
+                    PanelLocalToScreenHeight(kPanelScrollBarSizeY),
+                    state.rootWidgetRaw
+                );
+                ConfigureRawWidget(
+                    state,
+                    state.panelScrollBarThumbVisualWidget,
+                    kPanelScrollBarThumbVisualName,
+                    PanelLocalToScreenX(kPanelScrollBarPositionX),
+                    PanelLocalToScreenY(kPanelScrollBarPositionY),
+                    PanelLocalToScreenWidth(kPanelScrollBarSizeX),
+                    PanelLocalToScreenHeight(kPanelScrollBarMinThumbSizeY),
+                    state.rootWidgetRaw
+                );
+
+                if (state.widgetSetHitArea != nullptr) {
+                    // These are display-only overlays. Let the underlying native scrollbar subtree receive input.
+                    state.widgetSetHitArea(state.panelScrollBarTrackVisualWidget, nullptr);
+                    state.widgetSetHitArea(state.panelScrollBarThumbVisualWidget, nullptr);
+                }
+
+                OpaqueArtLabel panelScrollTrackArtLabel = {};
+                OpaqueArtLabel panelScrollThumbArtLabel = {};
+                const bool boundTrackArtLabel = BindArtLabelProxy(state, panelScrollTrackArtLabel, state.panelScrollBarTrackVisualWidget);
+                const bool boundThumbArtLabel = BindArtLabelProxy(state, panelScrollThumbArtLabel, state.panelScrollBarThumbVisualWidget);
+                if (boundTrackArtLabel && (state.artLabelSetAllArtVisible != nullptr)) {
+                    state.artLabelSetAllArtVisible(panelScrollTrackArtLabel.Get(), true);
+                }
+                if (boundThumbArtLabel && (state.artLabelSetAllArtVisible != nullptr)) {
+                    state.artLabelSetAllArtVisible(panelScrollThumbArtLabel.Get(), true);
+                }
+                ApplyRawWidgetState(state, state.panelScrollBarTrackVisualWidget);
+                ApplyRawWidgetState(state, state.panelScrollBarThumbVisualWidget);
+                SetRawWidgetVisible(state, state.panelScrollBarTrackVisualWidget, false);
+                SetRawWidgetVisible(state, state.panelScrollBarThumbVisualWidget, false);
+                if (boundTrackArtLabel && (state.artLabelDtor != nullptr)) {
+                    state.artLabelDtor(panelScrollTrackArtLabel.Get());
+                }
+                if (boundThumbArtLabel && (state.artLabelDtor != nullptr)) {
+                    state.artLabelDtor(panelScrollThumbArtLabel.Get());
+                }
+                LogInfo("CoH Mod Config UI: Resolved panel scrollbar visuals from the active screen.");
+            }
+            else {
+                LogWarning("CoH Mod Config UI: Failed to resolve panel scrollbar visuals from the active screen.");
+            }
+
+            // Step 12: Create native ComboBox widgets for enum rows and resolve their child widgets.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 state.rowComboBoxWidgets[i] = CreateRawWidgetByType(state, kComboBoxWidgetTypeName);
                 if (state.rowComboBoxWidgets[i] == nullptr) {
@@ -2981,21 +4151,188 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Native row ComboBox widgets created, attached, and child widgets resolved.");
 
-            // Step 14: Construct and bind title, summary, footer, row label, bool, numeric, and enum proxies.
+            // Step 13: Create a native ComboBox widget for the header-level mod selector.
+            state.modSelectorComboBoxWidget = CreateRawWidgetByType(state, kComboBoxWidgetTypeName);
+            if (state.modSelectorComboBoxWidget == nullptr) {
+                LogError("CoH Mod Config UI: Failed to create native ComboBox widget for the mod selector.");
+                return false;
+            }
+
+            if (!TransferDonorPresentationDirect(state, state.modSelectorComboBoxWidget, optionsMenuDonorScreen, kDropdownDonorWidgetName)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox root Presentation from donor.");
+            }
+
+            const std::string modSelectorComboBoxName = MakeModSelectorComboBoxName();
+            ConfigureRawWidget(
+                state,
+                state.modSelectorComboBoxWidget,
+                modSelectorComboBoxName.c_str(),
+                kModSelectorPositionX,
+                kModSelectorPositionY,
+                kModSelectorSizeX,
+                kModSelectorSizeY,
+                state.panelWidgetRaw
+            );
+            if (!AttachRenderChild(state, state.panelWidgetRaw, state.modSelectorComboBoxWidget)) {
+                LogError("CoH Mod Config UI: Failed to attach the mod selector ComboBox to the panel render tree.");
+                return false;
+            }
+
+            if (!ResolveComboBoxChildWidgets(
+                state,
+                state.modSelectorComboBoxWidget,
+                modSelectorComboBoxName,
+                state.modSelectorValueLabelWidget,
+                state.modSelectorArrowButtonWidget,
+                state.modSelectorListBoxWidget
+            )) {
+                LogError("CoH Mod Config UI: Failed to resolve DropDownExt child widgets for the mod selector.");
+                return false;
+            }
+
+            const std::string expectedModSelectorLabelName = MakeModSelectorLabelName();
+            const std::string expectedModSelectorButtonName = MakeModSelectorButtonName();
+            const std::string expectedModSelectorListBoxName = MakeModSelectorListBoxName();
+            LogInfo(
+                "CoH Mod Config UI: Mod selector ComboBox child widgets resolved as label='" +
+                ReadWidgetNameForLog(state.modSelectorValueLabelWidget) +
+                "', button='" +
+                ReadWidgetNameForLog(state.modSelectorArrowButtonWidget) +
+                "', listBox='" +
+                ReadWidgetNameForLog(state.modSelectorListBoxWidget) +
+                "'."
+            );
+
+            ConfigureRawWidget(
+                state,
+                state.modSelectorValueLabelWidget,
+                expectedModSelectorLabelName.c_str(),
+                0.0f,
+                0.0f,
+                kModSelectorLabelSizeX,
+                kModSelectorSizeY,
+                state.modSelectorComboBoxWidget
+            );
+            ConfigureRawWidget(
+                state,
+                state.modSelectorArrowButtonWidget,
+                expectedModSelectorButtonName.c_str(),
+                kModSelectorButtonOffsetX,
+                0.0f,
+                kModSelectorButtonSizeX,
+                kModSelectorSizeY,
+                state.modSelectorComboBoxWidget
+            );
+
+            if (!TransferDonorPresentationDirect(state, state.modSelectorValueLabelWidget, optionsMenuDonorScreen, kDropdownLabelDonorWidgetName)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox label Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, state.modSelectorArrowButtonWidget, optionsMenuDonorScreen, kDropdownButtonDonorWidgetName)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox button Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, state.modSelectorListBoxWidget, optionsMenuDonorScreen, kDropdownListBoxDonorWidgetName, true)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox list box Presentation from donor.");
+            }
+
+            void* modSelectorItemsWidget = nullptr;
+            void* modSelectorScrollBarWidget = nullptr;
+            void* modSelectorItemTemplateWidget = nullptr;
+            if (!ResolveListBoxChildWidgets(
+                state,
+                state.modSelectorListBoxWidget,
+                expectedModSelectorListBoxName,
+                modSelectorItemsWidget,
+                modSelectorScrollBarWidget,
+                modSelectorItemTemplateWidget
+            )) {
+                LogError("CoH Mod Config UI: Failed to resolve mod selector list box subtree widgets.");
+                return false;
+            }
+
+            ConfigureModSelectorListBoxGeometry(state);
+
+            if (!TransferDonorPresentationDirect(state, modSelectorItemsWidget, optionsMenuDonorScreen, kDropdownListBoxItemsDonorWidgetName)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector list items Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, modSelectorScrollBarWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector list scrollbar Presentation from donor.");
+            }
+            if (!TransferDonorPresentationDirect(state, modSelectorItemTemplateWidget, optionsMenuDonorScreen, kDropdownListBoxItemTemplateDonorWidgetName)) {
+                LogWarning("CoH Mod Config UI: Failed to transfer mod selector list item template Presentation from donor.");
+            }
+
+            void* modSelectorScrollBarDecButtonWidget = nullptr;
+            void* modSelectorScrollBarIncButtonWidget = nullptr;
+            void* modSelectorScrollBarTrackButtonWidget = nullptr;
+            void* modSelectorScrollBarPageDownButtonWidget = nullptr;
+            void* modSelectorScrollBarPageUpButtonWidget = nullptr;
+            const std::string modSelectorScrollBarName = MakeModSelectorListBoxScrollBarName();
+            if (ResolveScrollBarChildWidgets(
+                state,
+                modSelectorScrollBarWidget,
+                modSelectorScrollBarName,
+                modSelectorScrollBarDecButtonWidget,
+                modSelectorScrollBarIncButtonWidget,
+                modSelectorScrollBarTrackButtonWidget,
+                modSelectorScrollBarPageDownButtonWidget,
+                modSelectorScrollBarPageUpButtonWidget
+            )) {
+                LogInfo(
+                    "CoH Mod Config UI: Mod selector scrollbar child widgets resolved as dec='" +
+                    ReadWidgetNameForLog(modSelectorScrollBarDecButtonWidget) +
+                    "', inc='" +
+                    ReadWidgetNameForLog(modSelectorScrollBarIncButtonWidget) +
+                    "', track='" +
+                    ReadWidgetNameForLog(modSelectorScrollBarTrackButtonWidget) +
+                    "', pgDn='" +
+                    ReadWidgetNameForLog(modSelectorScrollBarPageDownButtonWidget) +
+                    "', pgUp='" +
+                    ReadWidgetNameForLog(modSelectorScrollBarPageUpButtonWidget) +
+                    "'."
+                );
+
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarDecButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName)) {
+                    LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar decrement button Presentation from donor.");
+                }
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarIncButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName)) {
+                    LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar increment button Presentation from donor.");
+                }
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarTrackButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName)) {
+                    LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar track Presentation from donor.");
+                }
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageDownButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
+                    LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar page-down Presentation from donor.");
+                }
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageUpButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
+                    LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar page-up Presentation from donor.");
+                }
+            } else {
+                LogWarning("CoH Mod Config UI: Failed to resolve mod selector scrollbar subtree widgets.");
+            }
+
+            LogInfo("CoH Mod Config UI: Native mod selector ComboBox created, attached, and child widgets resolved.");
+
+            // Step 14: Construct and bind title, row label, bool, numeric, and enum proxies.
             state.textLabelCtor(state.titleLabel.Get());
             state.widgetProxyBind(state.titleLabel.Get(), state.titleLabelRaw);
             ApplyWidgetProxyState(state, state.titleLabel.Get());
             TrySetTextLabel(state, state.titleLabel, "Mod Options", false);
 
-            state.textLabelCtor(state.summaryLabel.Get());
-            state.widgetProxyBind(state.summaryLabel.Get(), state.summaryLabelRaw);
-            ApplyWidgetProxyState(state, state.summaryLabel.Get());
-            TrySetTextLabel(state, state.summaryLabel, "Preparing mod configuration catalog...", true);
+            state.textLabelCtor(state.modSelectorValueLabel.Get());
+            state.widgetProxyBind(state.modSelectorValueLabel.Get(), state.modSelectorValueLabelWidget);
+            ApplyWidgetProxyState(state, state.modSelectorValueLabel.Get());
+            TrySetTextLabel(state, state.modSelectorValueLabel, BuildEmptyButtonText(), false);
 
-            state.textLabelCtor(state.footerLabel.Get());
-            state.widgetProxyBind(state.footerLabel.Get(), state.footerLabelRaw);
-            ApplyWidgetProxyState(state, state.footerLabel.Get());
-            TrySetTextLabel(state, state.footerLabel, BuildFooterText(), false);
+            if (!BindButtonProxy(state, state.modSelectorButton, state.modSelectorArrowButtonWidget)) {
+                LogError("CoH Mod Config UI: Failed to bind the mod selector button proxy.");
+                return false;
+            }
+            if (state.widgetProxySetVisible != nullptr) {
+                state.widgetProxySetVisible(state.modSelectorButton.Get(), true);
+            }
+            if (state.widgetProxySetEnabled != nullptr) {
+                state.widgetProxySetEnabled(state.modSelectorButton.Get(), true);
+            }
 
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 state.textLabelCtor(state.rowLabels[i].Get());
@@ -3037,7 +4374,7 @@ namespace ConfigUi::Frontend {
             LogInfo("CoH Mod Config UI: All proxy objects constructed.");
 
             state.overlayBuilt = true;
-            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + summary + footer + row labels + row CheckButtons + row Sliders + native enum ComboBox child binding milestone).");
+            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + mod selector + row labels + row CheckButtons + row Sliders + native enum ComboBox child binding milestone).");
             return true;
         }
 
@@ -3056,8 +4393,8 @@ namespace ConfigUi::Frontend {
                     state.textLabelDtor(state.rowLabels[i - 1u].Get());
                 }
 
-                state.textLabelDtor(state.footerLabel.Get());
-                state.textLabelDtor(state.summaryLabel.Get());
+                state.buttonDtor(state.modSelectorButton.Get());
+                state.textLabelDtor(state.modSelectorValueLabel.Get());
                 state.textLabelDtor(state.titleLabel.Get());
             }
 
@@ -3163,51 +4500,68 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
+            ModEntry* selectedMod = nullptr;
+            std::size_t selectedModIndex = 0u;
+            const bool hasSelectedMod = TryGetSelectedMod(state, selectedMod, selectedModIndex);
             SelectedOptionRef selectedOption = {};
-            const bool hasSelection = TryGetSelectedOption(state, selectedOption);
+            const bool hasSelectedOption = TryGetSelectedOption(state, selectedOption);
+            EnsureSelectedOptionVisible(state);
 
             bool updatedAllWidgets =
-                TrySetTextLabel(state, state.titleLabel, BuildTitleText(hasSelection ? &selectedOption : nullptr), false) &&
-                TrySetTextLabel(
-                    state,
-                    state.summaryLabel,
-                    hasSelection ? BuildSummaryText(selectedOption) : std::string("No registered mod options were found. F10 closes."),
-                    true
-                ) &&
-                TrySetTextLabel(state, state.footerLabel, BuildFooterText(), false);
+                TrySetTextLabel(state, state.titleLabel, BuildTitleText(selectedMod, hasSelectedOption ? &selectedOption : nullptr), false);
 
-            std::size_t firstVisibleIndex = 0u;
-            if (hasSelection && (selectedOption.optionCount > kVisibleRowCount)) {
-                const std::size_t centerOffset = kVisibleRowCount / 2u;
-                if (selectedOption.flatIndex > centerOffset) {
-                    firstVisibleIndex = selectedOption.flatIndex - centerOffset;
+            if (hasSelectedMod) {
+                ConfigureModSelectorListBoxGeometry(state);
+                SetRawWidgetVisible(state, state.modSelectorComboBoxWidget, true);
+                SetRawWidgetVisible(state, state.modSelectorListBoxWidget, true);
+                updatedAllWidgets =
+                    TrySetTextLabel(state, state.modSelectorValueLabel, BuildModDisplayText(*selectedMod), false) &&
+                    updatedAllWidgets;
+                if (!PopulateModListBox(state)) {
+                    LogWarning("CoH Mod Config UI: Failed to populate the mod selector list box.");
+                    updatedAllWidgets = false;
                 }
 
-                const std::size_t maxFirstVisibleIndex = selectedOption.optionCount - kVisibleRowCount;
-                firstVisibleIndex = (std::min)(firstVisibleIndex, maxFirstVisibleIndex);
+                long selectedNativeIndex = -1;
+                if (!TryMapVisualIndexToNativeListIndex(
+                    state.catalog->GetModCount(),
+                    static_cast<long>(state.selectedModIndex),
+                    selectedNativeIndex)) {
+                    selectedNativeIndex = -1;
+                }
+                state.observedModListSelection = selectedNativeIndex;
+                state.hasObservedModListSelection = selectedNativeIndex >= 0;
+
+                if (state.widgetProxySetVisible != nullptr) {
+                    state.widgetProxySetVisible(state.modSelectorValueLabel.Get(), true);
+                    state.widgetProxySetVisible(state.modSelectorButton.Get(), true);
+                }
+            } else {
+                SetRawWidgetVisible(state, state.modSelectorComboBoxWidget, false);
+                SetRawWidgetVisible(state, state.modSelectorListBoxWidget, false);
+                state.observedModListSelection = -1;
+                state.hasObservedModListSelection = false;
+                if (state.widgetProxySetVisible != nullptr) {
+                    state.widgetProxySetVisible(state.modSelectorValueLabel.Get(), false);
+                    state.widgetProxySetVisible(state.modSelectorButton.Get(), false);
+                }
             }
 
             for (std::size_t rowIndex = 0u; rowIndex < kVisibleRowCount; ++rowIndex) {
-                if (!hasSelection) {
-                    HideAllRowControls(state, rowIndex);
-                    continue;
-                }
-
-                const std::size_t flatIndex = firstVisibleIndex + rowIndex;
-                if (flatIndex >= selectedOption.optionCount) {
+                if (!hasSelectedOption) {
                     HideAllRowControls(state, rowIndex);
                     continue;
                 }
 
                 SelectedOptionRef rowOption = {};
-                if (TryGetOptionByFlatIndex(*state.catalog, flatIndex, rowOption)) {
+                if (TryGetVisibleRowOption(state, rowIndex, rowOption)) {
                     UpdateRowForOption(state, rowIndex, rowOption);
-                }
-                else {
+                } else {
                     HideAllRowControls(state, rowIndex);
                 }
             }
 
+            ConfigurePanelScrollBarGeometry(state);
             return updatedAllWidgets;
         }
 
@@ -3225,11 +4579,24 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
+            if (state.originalGameWindowProc == nullptr) {
+                InstallGameWindowHook(state);
+            }
+
             if (!RefreshVisibleMenu(state)) {
                 LogError("CoH Mod Config UI failed to build or refresh the overlay.");
                 return;
             }
 
+            state.pendingMouseWheelDelta = 0;
+            state.hasPendingLeftClick = false;
+            state.hasPendingMouseMove = false;
+            state.panelScrollBarDragging = false;
+            state.panelScrollBarDragOffsetY = 0.0f;
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
+            state.panelScrollBarPageUpWasActive = false;
+            state.panelScrollBarPageDownWasActive = false;
             state.setTopMost(screenManager, true);
             state.activateScreen(screenManager, state.screen, kDefaultScreenActivationType, false);
             state.overlayVisible = true;
@@ -3249,6 +4616,15 @@ namespace ConfigUi::Frontend {
             state.deactivateScreen(screenManager, state.screen);
             state.setTopMost(screenManager, false);
             state.overlayVisible = false;
+            state.pendingMouseWheelDelta = 0;
+            state.hasPendingLeftClick = false;
+            state.hasPendingMouseMove = false;
+            state.panelScrollBarDragging = false;
+            state.panelScrollBarDragOffsetY = 0.0f;
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
+            state.panelScrollBarPageUpWasActive = false;
+            state.panelScrollBarPageDownWasActive = false;
         }
 
         void ToggleMenuOverlay(State& state, ScreenManagerHandle* screenManager) {
@@ -3358,6 +4734,8 @@ namespace ConfigUi::Frontend {
 
             const ChoiceEntry& selectedChoice = optionEntry.choices[static_cast<std::size_t>(selectedChoiceIndex)];
             if (selectedChoice.value == optionEntry.currentValue.enumValue) {
+                state.modSelectorDropDownOpen = false;
+                state.activeEnumDropDownRowIndex = -1;
                 return false;
             }
 
@@ -3374,6 +4752,8 @@ namespace ConfigUi::Frontend {
             }
 
             state.selectedOptionIndex = rowOption.flatIndex;
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
             optionEntry.currentValue = newValue;
             LogInfo(
                 "CoH Mod Config UI: Native ComboBox selection changed for row " +
@@ -3384,6 +4764,44 @@ namespace ConfigUi::Frontend {
                 std::to_string(nativeSelectedIndex) +
                 " ('" +
                 BuildChoiceDisplayText(selectedChoice) +
+                "')."
+            );
+            RefreshVisibleMenu(state);
+            return true;
+        }
+
+        bool TryApplyModSelectorSelectionChange(State& state, long nativeSelectedIndex) {
+            if ((nativeSelectedIndex < 0) || (state.catalog == nullptr)) {
+                return false;
+            }
+
+            const std::vector<ModEntry>& mods = state.catalog->GetMods();
+            long selectedModIndex = -1;
+            if (!TryMapNativeListIndexToVisualIndex(mods.size(), nativeSelectedIndex, selectedModIndex) ||
+                (selectedModIndex < 0) ||
+                (selectedModIndex >= static_cast<long>(mods.size()))) {
+                return false;
+            }
+
+            const std::size_t newSelectedModIndex = static_cast<std::size_t>(selectedModIndex);
+            if (newSelectedModIndex == state.selectedModIndex) {
+                state.modSelectorDropDownOpen = false;
+                state.activeEnumDropDownRowIndex = -1;
+                return false;
+            }
+
+            state.selectedModIndex = newSelectedModIndex;
+            state.selectedOptionIndex = 0u;
+            state.topVisibleOptionIndex = 0u;
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
+            state.observedModListSelection = nativeSelectedIndex;
+            state.hasObservedModListSelection = true;
+            LogInfo(
+                "CoH Mod Config UI: Mod selector changed to mod " +
+                std::to_string(newSelectedModIndex) +
+                " ('" +
+                BuildModDisplayText(mods[newSelectedModIndex]) +
                 "')."
             );
             RefreshVisibleMenu(state);
@@ -3453,9 +4871,7 @@ namespace ConfigUi::Frontend {
 
             SetNativeRowSliderProgress(state, rowIndex, appliedProgress);
             state.selectedOptionIndex = rowOption.flatIndex;
-            TrySetTextLabel(state, state.titleLabel, BuildTitleText(&rowOption), false);
-            TrySetTextLabel(state, state.summaryLabel, BuildSummaryText(rowOption), true);
-            TrySetTextLabel(state, state.footerLabel, BuildFooterText(), false);
+            TrySetTextLabel(state, state.titleLabel, BuildTitleText(rowOption.modEntry, &rowOption), false);
 
             if (!valueChanged) {
                 return false;
@@ -3486,19 +4902,8 @@ namespace ConfigUi::Frontend {
         }
 
         std::size_t ComputeFirstVisibleIndex(State& state) {
-            SelectedOptionRef selectedOption = {};
-            if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
-                return 0u;
-            }
-
-            const std::size_t centerOffset = kVisibleRowCount / 2u;
-            std::size_t firstVisibleIndex = 0u;
-            if (selectedOption.flatIndex > centerOffset) {
-                firstVisibleIndex = selectedOption.flatIndex - centerOffset;
-            }
-
-            const std::size_t maxFirstVisibleIndex = selectedOption.optionCount - kVisibleRowCount;
-            return (std::min)(firstVisibleIndex, maxFirstVisibleIndex);
+            ClampTopVisibleOptionIndex(state);
+            return state.topVisibleOptionIndex;
         }
 
         void OnRowControlClicked(State& state, std::size_t rowIndex) {
@@ -3513,10 +4918,14 @@ namespace ConfigUi::Frontend {
 
             state.selectedOptionIndex = clickedOption.flatIndex;
             if (clickedOption.optionEntry->type == CoHModSDKConfigType_Enum) {
+                state.modSelectorDropDownOpen = false;
+                state.activeEnumDropDownRowIndex = static_cast<long>(rowIndex);
                 LogInfo("CoH Mod Config UI: Native ComboBox button clicked for row " + std::to_string(rowIndex) + ".");
                 return;
             }
 
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
             AdjustSelectedValue(state, 1);
             RefreshVisibleMenu(state);
         }
@@ -3528,6 +4937,17 @@ namespace ConfigUi::Frontend {
 
             void* rawWidget = state.widgetProxyGetWidget(proxyWidget);
             if (rawWidget == nullptr) {
+                return false;
+            }
+
+            const bool isActive = state.widgetGetState(rawWidget, kWidgetStateActive);
+            const bool released = !isActive && wasActive;
+            wasActive = isActive;
+            return released;
+        }
+
+        bool PollRawWidgetActiveEdge(State& state, void* rawWidget, bool& wasActive) {
+            if ((state.widgetGetState == nullptr) || (rawWidget == nullptr)) {
                 return false;
             }
 
@@ -3567,8 +4987,79 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
+            if (state.pendingMouseWheelDelta >= WHEEL_DELTA) {
+                state.pendingMouseWheelDelta -= WHEEL_DELTA;
+                LogInfo("CoH Mod Config UI: Mouse wheel up input observed.");
+                if (state.modSelectorDropDownOpen || (state.activeEnumDropDownRowIndex >= 0)) {
+                    TryScrollOpenDropDown(state, -1);
+                    return;
+                }
+                if (TryScrollOptionWindow(state, -1)) {
+                    return;
+                }
+            }
+            else if (state.pendingMouseWheelDelta <= -WHEEL_DELTA) {
+                state.pendingMouseWheelDelta += WHEEL_DELTA;
+                LogInfo("CoH Mod Config UI: Mouse wheel down input observed.");
+                if (state.modSelectorDropDownOpen || (state.activeEnumDropDownRowIndex >= 0)) {
+                    TryScrollOpenDropDown(state, 1);
+                    return;
+                }
+                if (TryScrollOptionWindow(state, 1)) {
+                    return;
+                }
+            }
+            if (TryHandlePanelScrollBarClick(state)) {
+                return;
+            }
+            if (TryHandlePanelScrollBarDrag(state)) {
+                return;
+            }
+            if (PollRawWidgetActiveEdge(state, state.panelScrollBarPageUpButtonWidget, state.panelScrollBarPageUpWasActive)) {
+                LogInfo("CoH Mod Config UI: Panel scrollbar page-up click observed.");
+                if (TryScrollOptionWindow(state, -(static_cast<int>(kVisibleRowCount) - 1))) {
+                    return;
+                }
+            }
+            if (PollRawWidgetActiveEdge(state, state.panelScrollBarPageDownButtonWidget, state.panelScrollBarPageDownWasActive)) {
+                LogInfo("CoH Mod Config UI: Panel scrollbar page-down click observed.");
+                if (TryScrollOptionWindow(state, static_cast<int>(kVisibleRowCount) - 1)) {
+                    return;
+                }
+            }
+
+            if (PollRawWidgetActiveEdge(state, state.modSelectorComboBoxWidget, state.modSelectorComboBoxWasActive) ||
+                PollWidgetActiveEdge(state, state.modSelectorValueLabel.Get(), state.modSelectorValueLabelWasActive) ||
+                PollWidgetActiveEdge(state, state.modSelectorButton.Get(), state.modSelectorArrowButtonWasActive)) {
+                state.modSelectorDropDownOpen = true;
+                state.activeEnumDropDownRowIndex = -1;
+                LogInfo("CoH Mod Config UI: Mod selector ComboBox button clicked.");
+            }
+            if (state.modSelectorListBoxWidget != nullptr) {
+                long selectedIndex = -1;
+                if (TryGetCustomListBoxSelectedIndex(state, state.modSelectorListBoxWidget, selectedIndex)) {
+                    if (!state.hasObservedModListSelection) {
+                        state.observedModListSelection = selectedIndex;
+                        state.hasObservedModListSelection = true;
+                    }
+                    else if (selectedIndex != state.observedModListSelection) {
+                        state.observedModListSelection = selectedIndex;
+                        if (TryApplyModSelectorSelectionChange(state, selectedIndex)) {
+                            return;
+                        }
+                    }
+                }
+            }
+
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 // Poll all widget types — only the visible one will have Active state.
+                if ((state.rowActiveControlType[i] == CoHModSDKConfigType_Enum) &&
+                    (PollRawWidgetActiveEdge(state, state.rowComboBoxWidgets[i], state.rowComboBoxWasActive[i]) ||
+                        PollWidgetActiveEdge(state, state.rowValueLabels[i].Get(), state.rowValueLabelWasActive[i]))) {
+                    state.modSelectorDropDownOpen = false;
+                    state.activeEnumDropDownRowIndex = static_cast<long>(i);
+                    LogInfo("CoH Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
+                }
                 if (PollWidgetActiveEdge(state, state.rowArrowButtons[i].Get(), state.rowArrowButtonWasActive[i])) {
                     OnRowControlClicked(state, i);
                 }
@@ -3633,9 +5124,14 @@ namespace ConfigUi::Frontend {
         state.screen = nullptr;
         state.overlayBuilt = false;
         state.overlayVisible = false;
+        state.selectedModIndex = 0u;
         state.selectedOptionIndex = 0u;
+        state.topVisibleOptionIndex = 0u;
+        state.modSelectorDropDownOpen = false;
+        state.activeEnumDropDownRowIndex = -1;
         state.updateHookObserved = false;
         state.toggleKeyWasDown = false;
+        state.pendingMouseWheelDelta = 0;
         state.toggleInputObserved = false;
         state.fileOverrideRegistered = false;
         ResetOverlayHandles(state);
@@ -3650,6 +5146,8 @@ namespace ConfigUi::Frontend {
             LogError("CoH Mod Config UI failed to resolve the F10 input key.");
             return false;
         }
+
+        InstallGameWindowHook(state);
 
 
         if (!ModSDK::Hooks::CreateHook(
@@ -3709,6 +5207,15 @@ namespace ConfigUi::Frontend {
 
             state.fileOverrideRegistered = false;
         }
+
+        if ((state.gameWindowHandle != nullptr) && (state.originalGameWindowProc != nullptr) && IsWindow(state.gameWindowHandle)) {
+            SetWindowLongPtr(state.gameWindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(state.originalGameWindowProc));
+        }
+        state.gameWindowHandle = nullptr;
+        state.originalGameWindowProc = nullptr;
+        state.pendingMouseWheelDelta = 0;
+        state.modSelectorDropDownOpen = false;
+        state.activeEnumDropDownRowIndex = -1;
 
         state.catalog = nullptr;
         state.installed = false;
