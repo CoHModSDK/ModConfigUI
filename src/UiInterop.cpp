@@ -182,6 +182,7 @@ namespace ConfigUi::Frontend {
         using GetStyleManagerFn = StyleManagerHandle * (__thiscall*)(ScreenManagerHandle* manager);
         using ScreenManagerUpdateFn = void(__thiscall*)(ScreenManagerHandle* manager, float deltaTime);
         using ActivateScreenFn = void(__thiscall*)(ScreenManagerHandle* manager, void* screen, int activationType, bool skipTransition);
+        using DeactivateAllScreensFn = void(__thiscall*)(ScreenManagerHandle* manager);
         using DeactivateScreenFn = void(__thiscall*)(ScreenManagerHandle* manager, void* screen);
         using CreateBlankScreenFn = void* (__thiscall*)(ScreenManagerHandle* manager);
         using SetTopMostFn = void(__thiscall*)(ScreenManagerHandle* manager, bool topMost);
@@ -348,7 +349,6 @@ namespace ConfigUi::Frontend {
             bool installed = false;
             bool overlayBuilt = false;
             bool overlayVisible = false;
-            bool overlayDestroyPending = false;
             bool overlayUnloadInProgress = false;
             std::size_t selectedModIndex = 0u;
             std::size_t selectedOptionIndex = 0u;
@@ -369,8 +369,10 @@ namespace ConfigUi::Frontend {
             GetScreenManagerFn getScreenManager = nullptr;
             GetStyleManagerFn getStyleManager = nullptr;
             std::uintptr_t userInterfaceBase = 0u;
+            void* deactivateAllScreensTarget = nullptr;
             void* unloadScreenTarget = nullptr;
             ScreenManagerUpdateFn originalScreenManagerUpdate = nullptr;
+            DeactivateAllScreensFn originalDeactivateAllScreens = nullptr;
             UnloadScreenFn originalUnloadScreen = nullptr;
             ActivateScreenFn activateScreen = nullptr;
             DeactivateScreenFn deactivateScreen = nullptr;
@@ -447,6 +449,8 @@ namespace ConfigUi::Frontend {
             bool toggleInputObserved = false;
             void* screen = nullptr;
             void* retiredScreen = nullptr;
+            void* templateDonorScreen = nullptr;
+            void* optionsMenuDonorScreen = nullptr;
             void* rootWidgetRaw = nullptr;
             void* panelWidgetRaw = nullptr;
             void* titleLabelRaw = nullptr;
@@ -462,7 +466,6 @@ namespace ConfigUi::Frontend {
             void* modSelectorListBoxWidget = nullptr;
             void* modSelectorValueLabelWidget = nullptr;
             void* modSelectorArrowButtonWidget = nullptr;
-            void* summaryLabelRaw = nullptr;
             std::array<void*, kVisibleRowCount> rowLabelWidgets = {};
             // Enum widgets
             std::array<void*, kVisibleRowCount> rowComboBoxWidgets = {};
@@ -477,7 +480,6 @@ namespace ConfigUi::Frontend {
             std::array<void*, kVisibleRowCount> rowSliderBarWidgets = {};
             OpaqueTextLabel titleLabel = {};
             OpaqueTextLabel modSelectorValueLabel = {};
-            OpaqueTextLabel summaryLabel = {};
             OpaqueButton modSelectorButton = {};
             std::array<OpaqueTextLabel, kVisibleRowCount> rowLabels = {};
             // Enum proxies
@@ -563,6 +565,7 @@ namespace ConfigUi::Frontend {
         bool TryMarkDropDownOpenFromClick(State& state, HWND hwnd, const POINT& clientPoint);
         bool TryScrollOpenDropDown(State& state, int direction);
         void RemoveGameWindowHook(State& state);
+        void __fastcall HookedUnloadScreen(ScreenManagerHandle* screenManager, void*, void* screen);
 
         LRESULT CALLBACK HookedGameWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
             State& state = GetState();
@@ -645,7 +648,6 @@ namespace ConfigUi::Frontend {
         }
 
         bool RefreshVisibleMenu(State& state);
-        void DestroyNativeRowSlider(State& state, std::size_t rowIndex);
         bool SetRawWidgetVisible(State& state, void* rawWidget, bool visible);
         bool AttachRenderChild(State& state, void* parentWidget, void* childWidget);
         bool RemoveRenderChild(State& state, void* parentWidget, void* childWidget);
@@ -1487,6 +1489,7 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?i@ScreenManager@UI@@SGPAV12@XZ", state.getScreenManager) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?Update@ScreenManager@UI@@QAEXM@Z", state.screenManagerUpdateTarget) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?ActivateScreen@ScreenManager@UI@@QAEXPAVScreen@2@W4ScreenActivationType@12@_N@Z", state.activateScreen) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?DeactivateAllScreens@ScreenManager@UI@@QAEXXZ", state.deactivateAllScreensTarget) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?DeactivateScreen@ScreenManager@UI@@QAEXPAVScreen@2@@Z", state.deactivateScreen) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetTopMost@ScreenManager@UI@@QAEX_N@Z", state.setTopMost) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetName@Screen@UI@@QAEXPBD@Z", state.screenSetName) &&
@@ -1842,7 +1845,6 @@ namespace ConfigUi::Frontend {
             state.modSelectorListBoxWidget = nullptr;
             state.modSelectorValueLabelWidget = nullptr;
             state.modSelectorArrowButtonWidget = nullptr;
-            state.summaryLabelRaw = nullptr;
             state.rowLabelWidgets.fill(nullptr);
             state.rowComboBoxWidgets.fill(nullptr);
             state.rowListBoxWidgets.fill(nullptr);
@@ -1871,14 +1873,12 @@ namespace ConfigUi::Frontend {
             state.observedModListSelection = -1;
             state.hasObservedModListSelection = false;
             state.rowActiveControlType.fill(CoHModSDKConfigType_Bool);
-            state.overlayDestroyPending = false;
             state.overlayUnloadInProgress = false;
         }
 
         void ResetOverlayProxyStorage(State& state) {
             state.titleLabel = {};
             state.modSelectorValueLabel = {};
-            state.summaryLabel = {};
             state.modSelectorButton = {};
             state.rowLabels = {};
             state.rowValueLabels = {};
@@ -1982,14 +1982,80 @@ namespace ConfigUi::Frontend {
             }
         }
 
+        void ZeroNativeSliderStorage(State& state) {
+            for (auto& slider : state.rowNativeSliders) {
+                slider.storage.fill(std::byte { 0 });
+            }
+        }
+
+        void ResetOverlayInteractionState(State& state) {
+            state.pendingMouseWheelDelta = 0;
+            state.hasPendingLeftClick = false;
+            state.hasPendingMouseMove = false;
+            state.panelScrollBarDragging = false;
+            state.panelScrollBarDragOffsetY = 0.0f;
+            state.modSelectorDropDownOpen = false;
+            state.activeEnumDropDownRowIndex = -1;
+            state.panelScrollBarPageUpWasActive = false;
+            state.panelScrollBarPageDownWasActive = false;
+        }
+
+        void RetireOverlayScreen(
+            State& state,
+            ScreenManagerHandle* screenManager,
+            void* screen,
+            bool clearTopMost,
+            bool detachPresentations
+        ) {
+            if (screen == nullptr) {
+                return;
+            }
+
+            state.overlayVisible = false;
+            ResetOverlayInteractionState(state);
+            RemoveGameWindowHook(state);
+
+            if (clearTopMost && (screenManager != nullptr) && (state.setTopMost != nullptr)) {
+                state.setTopMost(screenManager, false);
+            }
+
+            if (state.screenSetHidden != nullptr) {
+                state.screenSetHidden(screen, true);
+            }
+
+            if (detachPresentations) {
+                DetachSharedPresentations(state, screen);
+            }
+            state.retiredScreen = screen;
+            if (state.screen == screen) {
+                state.screen = nullptr;
+            }
+            state.overlayBuilt = false;
+        }
+
 
         void FinalizeOverlayAfterEngineUnload(State& state) {
             state.screen = nullptr;
-            ResetOverlayProxyStorage(state);
             ResetOverlayHandles(state);
             state.overlayBuilt = false;
             state.overlayVisible = false;
             state.overlayUnloadInProgress = false;
+        }
+
+        void ReleaseDonorScreens(State& state, ScreenManagerHandle* screenManager) {
+            if ((screenManager == nullptr) || (state.originalUnloadScreen == nullptr)) {
+                return;
+            }
+
+            if (state.templateDonorScreen != nullptr) {
+                state.originalUnloadScreen(screenManager, state.templateDonorScreen);
+                state.templateDonorScreen = nullptr;
+            }
+
+            if (state.optionsMenuDonorScreen != nullptr) {
+                state.originalUnloadScreen(screenManager, state.optionsMenuDonorScreen);
+                state.optionsMenuDonorScreen = nullptr;
+            }
         }
 
 
@@ -3115,13 +3181,15 @@ namespace ConfigUi::Frontend {
         }
 
         void SetNativeRowSliderProgress(State& state, std::size_t rowIndex, float progress) {
-            if ((rowIndex >= kVisibleRowCount) || !state.rowNativeSliderInitialized[rowIndex]) {
+            if (rowIndex >= kVisibleRowCount) {
                 return;
             }
 
             const float clampedProgress = std::clamp(progress, 0.0f, 1.0f);
-            state.rowNativeSliders[rowIndex].CurrentValue() = clampedProgress;
             ConfigureRowSliderProgress(state, rowIndex, clampedProgress);
+            if (state.rowNativeSliderInitialized[rowIndex]) {
+                state.rowNativeSliders[rowIndex].CurrentValue() = clampedProgress;
+            }
             state.rowObservedSliderProgress[rowIndex] = clampedProgress;
             state.rowHasObservedSliderProgress[rowIndex] = true;
         }
@@ -3177,22 +3245,6 @@ namespace ConfigUi::Frontend {
             state.rowHasObservedSliderProgress[rowIndex] = false;
             LogInfo("CoH Mod Config UI: Initialized native slider controller for row " + std::to_string(rowIndex) + ".");
             return true;
-        }
-
-        void DestroyNativeRowSlider(State& state, std::size_t rowIndex) {
-            if ((rowIndex >= kVisibleRowCount) ||
-                !state.rowNativeSliderInitialized[rowIndex] ||
-                (state.customWidgetDtor == nullptr) ||
-                (state.artLabelDtor == nullptr)) {
-                return;
-            }
-
-            state.artLabelDtor(state.rowNativeSliders[rowIndex].GetKnobProxy());
-            state.customWidgetDtor(state.rowNativeSliders[rowIndex].Get());
-            state.rowNativeSliders[rowIndex].storage.fill(std::byte { 0 });
-            state.rowNativeSliderInitialized[rowIndex] = false;
-            state.rowObservedSliderProgress[rowIndex] = 0.0f;
-            state.rowHasObservedSliderProgress[rowIndex] = false;
         }
 
         bool TryGetCustomListBoxSelectedIndex(State& state, void* listBoxWidget, long& outSelectedIndex) {
@@ -3655,6 +3707,11 @@ namespace ConfigUi::Frontend {
                 return true;
             }
 
+            if ((state.screen == nullptr) && (state.retiredScreen == nullptr)) {
+                ZeroNativeSliderStorage(state);
+                ResetOverlayProxyStorage(state);
+            }
+
             ScreenManagerHandle* const screenManager = GetScreenManager(state);
             if (screenManager == nullptr) {
                 LogError("CoH Mod Config UI cannot build the overlay because the ScreenManager is unavailable.");
@@ -3746,12 +3803,11 @@ namespace ConfigUi::Frontend {
             LogInfo("CoH Mod Config UI: Created panel Group widget.");
 
             // Transfer Presentation from donor screen so the panel has a visible background.
-            void* donorScreen = nullptr;
-            if (!EnsureDonorScreenLoaded(state, donorScreen, kTemplateScreenName)) {
+            if (!EnsureDonorScreenLoaded(state, state.templateDonorScreen, kTemplateScreenName)) {
                 LogError("CoH Mod Config UI: Failed to load donor screen '" + std::string(kTemplateScreenName) + "'.");
                 return false;
             }
-            if (!TransferDonorPresentationDirect(state, state.panelWidgetRaw, donorScreen, kTemplatePanelWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, state.panelWidgetRaw, state.templateDonorScreen, kTemplatePanelWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel Presentation from donor. Panel may be invisible.");
             }
 
@@ -3778,7 +3834,7 @@ namespace ConfigUi::Frontend {
                 LogError("CoH Mod Config UI: Failed to create title TextLabel widget.");
                 return false;
             }
-            if (!TransferDonorPresentationDirect(state, state.titleLabelRaw, donorScreen, kTemplateLabelWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, state.titleLabelRaw, state.templateDonorScreen, kTemplateLabelWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer title Presentation from donor.");
             }
             ConfigureRawWidget(
@@ -3804,7 +3860,7 @@ namespace ConfigUi::Frontend {
                     LogError("CoH Mod Config UI: Failed to create row label TextLabel widget for row " + std::to_string(i) + ".");
                     return false;
                 }
-                if (!TransferDonorPresentationDirect(state, state.rowLabelWidgets[i], donorScreen, kTemplateLabelWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, state.rowLabelWidgets[i], state.templateDonorScreen, kTemplateLabelWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer row label Presentation from donor for row " + std::to_string(i) + ".");
                 }
 
@@ -3838,11 +3894,6 @@ namespace ConfigUi::Frontend {
                     }
                 }
 
-                if (!RemoveRenderChild(state, state.rootWidgetRaw, state.rowCheckButtonWidgets[i])) {
-                    LogError("CoH Mod Config UI: Failed to remove preloaded CheckButton widget '" + rowCheckButtonName + "' from the root render tree for row " + std::to_string(i) + ".");
-                    return false;
-                }
-
                 ConfigureRawWidget(
                     state,
                     state.rowCheckButtonWidgets[i],
@@ -3853,13 +3904,14 @@ namespace ConfigUi::Frontend {
                     kRowCheckButtonSizeY,
                     state.panelWidgetRaw
                 );
+
+                RemoveRenderChild(state, state.rootWidgetRaw, state.rowCheckButtonWidgets[i]);
                 if (!AttachRenderChild(state, state.panelWidgetRaw, state.rowCheckButtonWidgets[i])) {
                     LogError("CoH Mod Config UI: Failed to attach preloaded CheckButton widget '" + rowCheckButtonName + "' to the panel render tree for row " + std::to_string(i) + ".");
                     return false;
                 }
-
                 SetRawWidgetVisible(state, state.rowCheckButtonWidgets[i], false);
-                LogInfo("CoH Mod Config UI: Resolved, moved, and attached preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
+                LogInfo("CoH Mod Config UI: Resolved, reattached, and positioned preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
             }
             LogInfo("CoH Mod Config UI: Row bool CheckButton widgets resolved from the active screen.");
 
@@ -3887,11 +3939,6 @@ namespace ConfigUi::Frontend {
                         " (button='" + rowSliderButtonName +
                         "', bar='" + rowSliderBarName + "')."
                     );
-                    return false;
-                }
-
-                if (!RemoveRenderChild(state, state.rootWidgetRaw, state.rowSliderWidgets[i])) {
-                    LogError("CoH Mod Config UI: Failed to remove preloaded slider widget '" + rowSliderName + "' from the root render tree for row " + std::to_string(i) + ".");
                     return false;
                 }
 
@@ -3926,18 +3973,18 @@ namespace ConfigUi::Frontend {
                     state.rowSliderWidgets[i]
                 );
 
+                RemoveRenderChild(state, state.rootWidgetRaw, state.rowSliderWidgets[i]);
                 if (!AttachRenderChild(state, state.panelWidgetRaw, state.rowSliderWidgets[i])) {
                     LogError("CoH Mod Config UI: Failed to attach preloaded slider widget '" + rowSliderName + "' to the panel render tree for row " + std::to_string(i) + ".");
                     return false;
                 }
-
                 SetRawWidgetVisible(state, state.rowSliderWidgets[i], false);
                 if (!InitializeNativeRowSlider(state, i)) {
                     LogError("CoH Mod Config UI: Failed to initialize native slider controller for row " + std::to_string(i) + ".");
                     return false;
                 }
                 LogInfo(
-                    "CoH Mod Config UI: Resolved, moved, and attached preloaded slider widget '" +
+                    "CoH Mod Config UI: Resolved, reattached, and positioned preloaded slider widget '" +
                     rowSliderName +
                     "' for row " +
                     std::to_string(i) +
@@ -3946,8 +3993,7 @@ namespace ConfigUi::Frontend {
             }
             LogInfo("CoH Mod Config UI: Row numeric slider widgets resolved from the active screen.");
 
-            void* optionsMenuDonorScreen = nullptr;
-            if (!EnsureDonorScreenLoaded(state, optionsMenuDonorScreen, kOptionsmenuDonorScreenName)) {
+            if (!EnsureDonorScreenLoaded(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName)) {
                 LogError("CoH Mod Config UI: Failed to load donor screen '" + std::string(kOptionsmenuDonorScreenName) + "' for enum row widgets.");
                 return false;
             }
@@ -3957,7 +4003,7 @@ namespace ConfigUi::Frontend {
                 LogError("CoH Mod Config UI: Failed to create the panel ScrollBar widget.");
                 return false;
             }
-            if (!TransferDonorPresentationDirect(state, state.panelScrollBarWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar Presentation from donor.");
             }
             ConfigureRawWidget(
@@ -4000,19 +4046,19 @@ namespace ConfigUi::Frontend {
                 ReadWidgetNameForLog(state.panelScrollBarPageUpButtonWidget) +
                 "'."
             );
-            if (!TransferDonorPresentationDirect(state, state.panelScrollBarDecButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarDecButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar decrement button Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, state.panelScrollBarIncButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarIncButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar increment button Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, state.panelScrollBarTrackButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarTrackButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar track Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, state.panelScrollBarPageDownButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarPageDownButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar page-down Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, state.panelScrollBarPageUpButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.panelScrollBarPageUpButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer panel ScrollBar page-up Presentation from donor.");
             }
             SetRawWidgetVisible(state, state.panelScrollBarWidget, false);
@@ -4081,7 +4127,7 @@ namespace ConfigUi::Frontend {
                     return false;
                 }
 
-                if (!TransferDonorPresentationDirect(state, state.rowComboBoxWidgets[i], optionsMenuDonorScreen, kDropdownDonorWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, state.rowComboBoxWidgets[i], state.optionsMenuDonorScreen, kDropdownDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer ComboBox root Presentation from donor for row " + std::to_string(i) + ".");
                 }
 
@@ -4174,13 +4220,13 @@ namespace ConfigUi::Frontend {
                 );
                 LogInfo("CoH Mod Config UI: Row " + std::to_string(i) + " ComboBox label/button geometry configured.");
 
-                if (!TransferDonorPresentationDirect(state, state.rowValueLabelWidgets[i], optionsMenuDonorScreen, kDropdownLabelDonorWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, state.rowValueLabelWidgets[i], state.optionsMenuDonorScreen, kDropdownLabelDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer ComboBox label Presentation from donor for row " + std::to_string(i) + ".");
                 }
-                if (!TransferDonorPresentationDirect(state, state.rowArrowButtonWidgets[i], optionsMenuDonorScreen, kDropdownButtonDonorWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, state.rowArrowButtonWidgets[i], state.optionsMenuDonorScreen, kDropdownButtonDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer ComboBox button Presentation from donor for row " + std::to_string(i) + ".");
                 }
-                if (!TransferDonorPresentationDirect(state, rowListBoxWidget, optionsMenuDonorScreen, kDropdownListBoxDonorWidgetName, true)) {
+                if (!TransferDonorPresentationDirect(state, rowListBoxWidget, state.optionsMenuDonorScreen, kDropdownListBoxDonorWidgetName, true)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer ComboBox list box Presentation from donor for row " + std::to_string(i) + ".");
                 }
 
@@ -4236,10 +4282,10 @@ namespace ConfigUi::Frontend {
                         rowListBoxWidget
                     );
 
-                    if (!TransferDonorPresentationDirect(state, rowListItemsWidget, optionsMenuDonorScreen, kDropdownListBoxItemsDonorWidgetName)) {
+                    if (!TransferDonorPresentationDirect(state, rowListItemsWidget, state.optionsMenuDonorScreen, kDropdownListBoxItemsDonorWidgetName)) {
                         LogWarning("CoH Mod Config UI: Failed to transfer ComboBox list items Presentation from donor for row " + std::to_string(i) + ".");
                     }
-                    if (!TransferDonorPresentationDirect(state, rowListScrollBarWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName)) {
+                    if (!TransferDonorPresentationDirect(state, rowListScrollBarWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName)) {
                         LogWarning("CoH Mod Config UI: Failed to transfer ComboBox list scrollbar Presentation from donor for row " + std::to_string(i) + ".");
                     }
                     void* rowScrollBarDecButtonWidget = nullptr;
@@ -4266,26 +4312,26 @@ namespace ConfigUi::Frontend {
                             "', pgUp='" + ReadWidgetNameForLog(rowScrollBarPageUpButtonWidget) + "'."
                         );
 
-                        if (!TransferDonorPresentationDirect(state, rowScrollBarDecButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName)) {
+                        if (!TransferDonorPresentationDirect(state, rowScrollBarDecButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName)) {
                             LogWarning("CoH Mod Config UI: Failed to transfer scrollbar decrement button Presentation from donor for row " + std::to_string(i) + ".");
                         }
-                        if (!TransferDonorPresentationDirect(state, rowScrollBarIncButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName)) {
+                        if (!TransferDonorPresentationDirect(state, rowScrollBarIncButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName)) {
                             LogWarning("CoH Mod Config UI: Failed to transfer scrollbar increment button Presentation from donor for row " + std::to_string(i) + ".");
                         }
-                        if (!TransferDonorPresentationDirect(state, rowScrollBarTrackButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName)) {
+                        if (!TransferDonorPresentationDirect(state, rowScrollBarTrackButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName)) {
                             LogWarning("CoH Mod Config UI: Failed to transfer scrollbar track Presentation from donor for row " + std::to_string(i) + ".");
                         }
-                        if (!TransferDonorPresentationDirect(state, rowScrollBarPageDownButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
+                        if (!TransferDonorPresentationDirect(state, rowScrollBarPageDownButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
                             LogWarning("CoH Mod Config UI: Failed to transfer scrollbar page-down Presentation from donor for row " + std::to_string(i) + ".");
                         }
-                        if (!TransferDonorPresentationDirect(state, rowScrollBarPageUpButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
+                        if (!TransferDonorPresentationDirect(state, rowScrollBarPageUpButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
                             LogWarning("CoH Mod Config UI: Failed to transfer scrollbar page-up Presentation from donor for row " + std::to_string(i) + ".");
                         }
                     }
                     else {
                         LogWarning("CoH Mod Config UI: Failed to resolve scrollbar subtree widgets for row " + std::to_string(i) + ".");
                     }
-                    if (!TransferDonorPresentationDirect(state, rowListItemTemplateWidget, optionsMenuDonorScreen, kDropdownListBoxItemTemplateDonorWidgetName)) {
+                    if (!TransferDonorPresentationDirect(state, rowListItemTemplateWidget, state.optionsMenuDonorScreen, kDropdownListBoxItemTemplateDonorWidgetName)) {
                         LogWarning("CoH Mod Config UI: Failed to transfer ComboBox list item template Presentation from donor for row " + std::to_string(i) + ".");
                     }
                 }
@@ -4302,7 +4348,7 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            if (!TransferDonorPresentationDirect(state, state.modSelectorComboBoxWidget, optionsMenuDonorScreen, kDropdownDonorWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, state.modSelectorComboBoxWidget, state.optionsMenuDonorScreen, kDropdownDonorWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox root Presentation from donor.");
             }
 
@@ -4368,13 +4414,13 @@ namespace ConfigUi::Frontend {
                 state.modSelectorComboBoxWidget
             );
 
-            if (!TransferDonorPresentationDirect(state, state.modSelectorValueLabelWidget, optionsMenuDonorScreen, kDropdownLabelDonorWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, state.modSelectorValueLabelWidget, state.optionsMenuDonorScreen, kDropdownLabelDonorWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox label Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, state.modSelectorArrowButtonWidget, optionsMenuDonorScreen, kDropdownButtonDonorWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, state.modSelectorArrowButtonWidget, state.optionsMenuDonorScreen, kDropdownButtonDonorWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox button Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, state.modSelectorListBoxWidget, optionsMenuDonorScreen, kDropdownListBoxDonorWidgetName, true)) {
+            if (!TransferDonorPresentationDirect(state, state.modSelectorListBoxWidget, state.optionsMenuDonorScreen, kDropdownListBoxDonorWidgetName, true)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector ComboBox list box Presentation from donor.");
             }
 
@@ -4395,13 +4441,13 @@ namespace ConfigUi::Frontend {
 
             ConfigureModSelectorListBoxGeometry(state);
 
-            if (!TransferDonorPresentationDirect(state, modSelectorItemsWidget, optionsMenuDonorScreen, kDropdownListBoxItemsDonorWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, modSelectorItemsWidget, state.optionsMenuDonorScreen, kDropdownListBoxItemsDonorWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector list items Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, modSelectorScrollBarWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, modSelectorScrollBarWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarDonorWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector list scrollbar Presentation from donor.");
             }
-            if (!TransferDonorPresentationDirect(state, modSelectorItemTemplateWidget, optionsMenuDonorScreen, kDropdownListBoxItemTemplateDonorWidgetName)) {
+            if (!TransferDonorPresentationDirect(state, modSelectorItemTemplateWidget, state.optionsMenuDonorScreen, kDropdownListBoxItemTemplateDonorWidgetName)) {
                 LogWarning("CoH Mod Config UI: Failed to transfer mod selector list item template Presentation from donor.");
             }
 
@@ -4435,19 +4481,19 @@ namespace ConfigUi::Frontend {
                     "'."
                 );
 
-                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarDecButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarDecButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarDecDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar decrement button Presentation from donor.");
                 }
-                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarIncButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarIncButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarIncDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar increment button Presentation from donor.");
                 }
-                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarTrackButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName)) {
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarTrackButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarTrackDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar track Presentation from donor.");
                 }
-                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageDownButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageDownButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageDownDonorWidgetName, true)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar page-down Presentation from donor.");
                 }
-                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageUpButtonWidget, optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
+                if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageUpButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar page-up Presentation from donor.");
                 }
             } else {
@@ -4520,31 +4566,6 @@ namespace ConfigUi::Frontend {
             state.overlayBuilt = true;
             LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + mod selector + row labels + row CheckButtons + row Sliders + native enum ComboBox child binding milestone).");
             return true;
-        }
-
-        void DestroyOverlay(State& state) {
-            if (!state.overlayBuilt && (state.screen == nullptr)) {
-                return;
-            }
-
-            ScreenManagerHandle* const screenManager = GetScreenManager(state);
-            if ((state.screen != nullptr) && (screenManager != nullptr) && (state.unloadScreen != nullptr)) {
-                for (std::size_t rowIndex = 0u; rowIndex < kVisibleRowCount; ++rowIndex) {
-                    if (state.rowNativeSliderInitialized[rowIndex]) {
-                        DestroyNativeRowSlider(state, rowIndex);
-                    }
-                }
-                if (state.screenSetHidden != nullptr) {
-                    state.screenSetHidden(state.screen, true);
-                }
-                DetachSharedPresentations(state, state.screen);
-                state.unloadScreen(screenManager, state.screen);
-                FinalizeOverlayAfterEngineUnload(state);
-            }
-
-            ResetOverlayHandles(state);
-            state.overlayBuilt = false;
-            state.overlayVisible = false;
         }
 
         void HideAllRowControls(State& state, std::size_t rowIndex) {
@@ -4726,16 +4747,7 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            state.pendingMouseWheelDelta = 0;
-            state.hasPendingLeftClick = false;
-            state.hasPendingMouseMove = false;
-            state.panelScrollBarDragging = false;
-            state.panelScrollBarDragOffsetY = 0.0f;
-            state.modSelectorDropDownOpen = false;
-            state.activeEnumDropDownRowIndex = -1;
-            state.panelScrollBarPageUpWasActive = false;
-            state.panelScrollBarPageDownWasActive = false;
-            state.overlayDestroyPending = false;
+            ResetOverlayInteractionState(state);
             state.setTopMost(screenManager, true);
             state.activateScreen(screenManager, state.screen, kDefaultScreenActivationType, false);
             state.overlayVisible = true;
@@ -4753,35 +4765,7 @@ namespace ConfigUi::Frontend {
 
             LogInfo("CoH Mod Config UI is deactivating the screen.");
             state.deactivateScreen(screenManager, state.screen);
-            state.setTopMost(screenManager, false);
-            state.overlayVisible = false;
-            state.pendingMouseWheelDelta = 0;
-            state.hasPendingLeftClick = false;
-            state.hasPendingMouseMove = false;
-            state.panelScrollBarDragging = false;
-            state.panelScrollBarDragOffsetY = 0.0f;
-            state.modSelectorDropDownOpen = false;
-            state.activeEnumDropDownRowIndex = -1;
-            state.panelScrollBarPageUpWasActive = false;
-            state.panelScrollBarPageDownWasActive = false;
-            state.overlayDestroyPending = false;
-            RemoveGameWindowHook(state);
-            if ((state.screen != nullptr) && (state.screenSetHidden != nullptr)) {
-                state.screenSetHidden(state.screen, true);
-            }
-            // Clear all shared Presentation pointers now, before the engine's
-            // Flush gets a chance to destroy widgets and double-free them.
-            DetachSharedPresentations(state, state.screen);
-            // Hand the screen off to the retired-screen slot so
-            // HookedUnloadScreen can intercept the engine's native
-            // teardown.  Do NOT zero proxy storage here — the engine
-            // still owns the widget tree and will traverse it during
-            // Flush (inside the next ScreenManager::Update).  Cleaning
-            // up before UnloadScreen completes causes the engine to
-            // follow stale pointers into zeroed storage and crash.
-            state.retiredScreen = state.screen;
-            state.screen = nullptr;
-            state.overlayBuilt = false;
+            RetireOverlayScreen(state, screenManager, state.screen, true, true);
         }
 
         void ToggleMenuOverlay(State& state, ScreenManagerHandle* screenManager) {
@@ -5265,6 +5249,21 @@ namespace ConfigUi::Frontend {
             HandleUiTick(state);
         }
 
+        void __fastcall HookedDeactivateAllScreens(ScreenManagerHandle* screenManager, void*) {
+            State& state = GetState();
+
+            if ((state.screen != nullptr) && state.overlayVisible) {
+                HideMenuOverlay(state, screenManager);
+                if (state.retiredScreen != nullptr) {
+                    HookedUnloadScreen(screenManager, nullptr, state.retiredScreen);
+                }
+            }
+
+            if (state.originalDeactivateAllScreens != nullptr) {
+                state.originalDeactivateAllScreens(screenManager);
+            }
+        }
+
         void __fastcall HookedUnloadScreen(ScreenManagerHandle* screenManager, void*, void* screen) {
             State& state = GetState();
 
@@ -5276,7 +5275,6 @@ namespace ConfigUi::Frontend {
                 LogInfo("CoH Mod Config UI: Preparing the custom overlay screen for native unload.");
                 state.overlayUnloadInProgress = true;
                 state.overlayVisible = false;
-                state.overlayDestroyPending = false;
                 RemoveGameWindowHook(state);
                 if (state.screenSetHidden != nullptr) {
                     state.screenSetHidden(screen, true);
@@ -5285,30 +5283,25 @@ namespace ConfigUi::Frontend {
                 if (state.originalUnloadScreen != nullptr) {
                     state.originalUnloadScreen(screenManager, screen);
                 }
-                for (auto& slider : state.rowNativeSliders) {
-                    slider.storage.fill(std::byte { 0 });
-                }
+                ReleaseDonorScreens(state, screenManager);
                 FinalizeOverlayAfterEngineUnload(state);
                 return;
             }
 
             if ((screen != nullptr) && (screen == state.retiredScreen)) {
-                LogInfo("CoH Mod Config UI: Observed native unload of the retired overlay screen.");
                 state.retiredScreen = nullptr;
 
                 DetachSharedPresentations(state, screen);
                 if (state.originalUnloadScreen != nullptr) {
                     state.originalUnloadScreen(screenManager, screen);
                 }
+                ReleaseDonorScreens(state, screenManager);
 
-                // The engine is done with the widget tree — safe to zero all proxy storage now,
-                // but only if no new overlay was created in the meantime (the new overlay
-                // would be using the same static proxy storage arrays).
+                // Do not zero proxy/controller storage here. The engine may still walk
+                // bound proxy objects during the later Flush phase even after
+                // UnloadScreen returns, and clearing our static storage too early
+                // leaves null-vtable objects inside CoHModConfigUI.dll.
                 if (!state.overlayBuilt) {
-                    for (auto& slider : state.rowNativeSliders) {
-                        slider.storage.fill(std::byte { 0 });
-                    }
-                    ResetOverlayProxyStorage(state);
                     ResetOverlayHandles(state);
                 }
                 return;
@@ -5334,6 +5327,9 @@ namespace ConfigUi::Frontend {
 
         state.catalog = catalog;
         state.screen = nullptr;
+        state.retiredScreen = nullptr;
+        state.templateDonorScreen = nullptr;
+        state.optionsMenuDonorScreen = nullptr;
         state.overlayBuilt = false;
         state.overlayVisible = false;
         state.selectedModIndex = 0u;
@@ -5346,8 +5342,6 @@ namespace ConfigUi::Frontend {
         state.pendingMouseWheelDelta = 0;
         state.toggleInputObserved = false;
         state.fileOverrideRegistered = false;
-        state.screen = nullptr;
-        state.retiredScreen = nullptr;
         ResetOverlayHandles(state);
 
         if (!ResolveInterop(state)) {
@@ -5371,6 +5365,19 @@ namespace ConfigUi::Frontend {
 
         if (!ModSDK::Hooks::EnableHook(state.screenManagerUpdateTarget)) {
             LogError("CoH Mod Config UI failed to enable the ScreenManager::Update hook.");
+            return false;
+        }
+
+        if (!ModSDK::Hooks::CreateHook(
+            state.deactivateAllScreensTarget,
+            reinterpret_cast<void*>(&HookedDeactivateAllScreens),
+            reinterpret_cast<void**>(&state.originalDeactivateAllScreens))) {
+            LogError("CoH Mod Config UI failed to create the ScreenManager::DeactivateAllScreens hook.");
+            return false;
+        }
+
+        if (!ModSDK::Hooks::EnableHook(state.deactivateAllScreensTarget)) {
+            LogError("CoH Mod Config UI failed to enable the ScreenManager::DeactivateAllScreens hook.");
             return false;
         }
 
@@ -5410,6 +5417,9 @@ namespace ConfigUi::Frontend {
         if (state.screenManagerUpdateTarget != nullptr) {
             ModSDK::Hooks::DisableHook(state.screenManagerUpdateTarget);
         }
+        if (state.deactivateAllScreensTarget != nullptr) {
+            ModSDK::Hooks::DisableHook(state.deactivateAllScreensTarget);
+        }
         if (state.unloadScreenTarget != nullptr) {
             ModSDK::Hooks::DisableHook(state.unloadScreenTarget);
         }
@@ -5434,9 +5444,6 @@ namespace ConfigUi::Frontend {
                 }
                 DetachSharedPresentations(state, state.screen);
                 state.unloadScreen(screenManager, state.screen);
-                for (auto& slider : state.rowNativeSliders) {
-                    slider.storage.fill(std::byte { 0 });
-                }
                 FinalizeOverlayAfterEngineUnload(state);
             }
 
@@ -5444,10 +5451,9 @@ namespace ConfigUi::Frontend {
                 DetachSharedPresentations(state, state.retiredScreen);
                 state.unloadScreen(screenManager, state.retiredScreen);
                 state.retiredScreen = nullptr;
-                for (auto& slider : state.rowNativeSliders) {
-                    slider.storage.fill(std::byte { 0 });
-                }
             }
+
+            ReleaseDonorScreens(state, screenManager);
 
             state.fileOverrideRegistered = false;
         }
@@ -5458,6 +5464,10 @@ namespace ConfigUi::Frontend {
 
         state.catalog = nullptr;
         state.installed = false;
+        state.screen = nullptr;
+        state.retiredScreen = nullptr;
+        state.templateDonorScreen = nullptr;
+        state.optionsMenuDonorScreen = nullptr;
         state.overlayBuilt = false;
         state.overlayVisible = false;
     }
