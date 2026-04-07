@@ -348,6 +348,8 @@ namespace ConfigUi::Frontend {
             bool installed = false;
             bool overlayBuilt = false;
             bool overlayVisible = false;
+            bool overlayDestroyPending = false;
+            bool overlayUnloadInProgress = false;
             std::size_t selectedModIndex = 0u;
             std::size_t selectedOptionIndex = 0u;
             std::size_t topVisibleOptionIndex = 0u;
@@ -367,7 +369,9 @@ namespace ConfigUi::Frontend {
             GetScreenManagerFn getScreenManager = nullptr;
             GetStyleManagerFn getStyleManager = nullptr;
             std::uintptr_t userInterfaceBase = 0u;
+            void* unloadScreenTarget = nullptr;
             ScreenManagerUpdateFn originalScreenManagerUpdate = nullptr;
+            UnloadScreenFn originalUnloadScreen = nullptr;
             ActivateScreenFn activateScreen = nullptr;
             DeactivateScreenFn deactivateScreen = nullptr;
             CreateBlankScreenFn createBlankScreen = nullptr;
@@ -442,6 +446,7 @@ namespace ConfigUi::Frontend {
             bool toggleKeyWasDown = false;
             bool toggleInputObserved = false;
             void* screen = nullptr;
+            void* retiredScreen = nullptr;
             void* rootWidgetRaw = nullptr;
             void* panelWidgetRaw = nullptr;
             void* titleLabelRaw = nullptr;
@@ -557,6 +562,7 @@ namespace ConfigUi::Frontend {
         bool IsPointInsideOpenDropDown(State& state, HWND hwnd, const POINT& clientPoint);
         bool TryMarkDropDownOpenFromClick(State& state, HWND hwnd, const POINT& clientPoint);
         bool TryScrollOpenDropDown(State& state, int direction);
+        void RemoveGameWindowHook(State& state);
 
         LRESULT CALLBACK HookedGameWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
             State& state = GetState();
@@ -624,7 +630,25 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
+        void RemoveGameWindowHook(State& state) {
+            if ((state.gameWindowHandle != nullptr) && (state.originalGameWindowProc != nullptr) && IsWindow(state.gameWindowHandle)) {
+                SetWindowLongPtr(state.gameWindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(state.originalGameWindowProc));
+            }
+
+            state.gameWindowHandle = nullptr;
+            state.originalGameWindowProc = nullptr;
+            state.pendingMouseWheelDelta = 0;
+            state.hasPendingLeftClick = false;
+            state.hasPendingMouseMove = false;
+            state.panelScrollBarDragging = false;
+            state.panelScrollBarDragOffsetY = 0.0f;
+        }
+
         bool RefreshVisibleMenu(State& state);
+        void DestroyNativeRowSlider(State& state, std::size_t rowIndex);
+        bool SetRawWidgetVisible(State& state, void* rawWidget, bool visible);
+        bool AttachRenderChild(State& state, void* parentWidget, void* childWidget);
+        bool RemoveRenderChild(State& state, void* parentWidget, void* childWidget);
         std::size_t ComputeFirstVisibleIndex(State& state);
         bool TryGetVisibleRowOption(State& state, std::size_t rowIndex, SelectedOptionRef& outSelectedOption);
         float ComputeListBoxHeightFromItemCount(std::size_t itemCount, float itemHeight);
@@ -1468,7 +1492,7 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetName@Screen@UI@@QAEXPBD@Z", state.screenSetName) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetRootWidget@Screen@UI@@QAEPAVWidget@2@XZ", state.screenGetRootWidget) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?LoadScreen@ScreenManager@UI@@QAEPAVScreen@2@PBD@Z", state.loadScreenByName) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?UnloadScreen@ScreenManager@UI@@QAEXPAVScreen@2@@Z", state.unloadScreen) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?UnloadScreen@ScreenManager@UI@@QAEXPAVScreen@2@@Z", state.unloadScreenTarget) &&
                 ResolveRequiredExport(platformModule, kPlatformModuleName, "?GetKeyFromName@Input@Plat@@YG?AW4InputKey@2@PBD@Z", state.getKeyFromName) &&
                 ResolveRequiredExport(platformModule, kPlatformModuleName, "?CheckInputQueueForKeyPress@Input@Plat@@YG_NW4InputKey@2@@Z", state.checkInputQueueForKeyPress) &&
                 ResolveRequiredExport(platformModule, kPlatformModuleName, "?IsKeyPressed@Input@Plat@@YG_NW4InputKey@2@@Z", state.isKeyPressed) &&
@@ -1847,7 +1871,127 @@ namespace ConfigUi::Frontend {
             state.observedModListSelection = -1;
             state.hasObservedModListSelection = false;
             state.rowActiveControlType.fill(CoHModSDKConfigType_Bool);
+            state.overlayDestroyPending = false;
+            state.overlayUnloadInProgress = false;
         }
+
+        void ResetOverlayProxyStorage(State& state) {
+            state.titleLabel = {};
+            state.modSelectorValueLabel = {};
+            state.summaryLabel = {};
+            state.modSelectorButton = {};
+            state.rowLabels = {};
+            state.rowValueLabels = {};
+            state.rowArrowButtons = {};
+            state.rowCheckButtons = {};
+            state.rowSliders = {};
+            // NOTE: rowNativeSliders is intentionally NOT zeroed here.
+            // The native slider CustomWidget controllers must stay alive
+            // until the engine's UnloadScreen has finished processing
+            // the widget tree. The engine may reference these controllers
+            // through the raw slider widgets' internal fields (registered
+            // via BindNativeRowSliderInput). Zeroing them before
+            // UnloadScreen causes the engine to follow stale pointers
+            // into zeroed storage and crash during widget teardown.
+            // Storage is zeroed explicitly after UnloadScreen completes.
+        }
+
+        // Try to extract the field offset from a simple __thiscall getter.
+        // Expects the function to be: mov eax, [ecx+disp8/disp32]; ret
+        // Returns -1 on failure.
+        int ExtractGetterOffset(void* fn) {
+            if (fn == nullptr) {
+                return -1;
+            }
+            const auto* code = reinterpret_cast<const unsigned char*>(fn);
+            // mov eax, [ecx + disp8] → 8B 41 XX; ret → C3
+            if (code[0] == 0x8B && code[1] == 0x41 && code[3] == 0xC3) {
+                return static_cast<int>(code[2]);
+            }
+            // mov eax, [ecx + disp32] → 8B 81 XX XX XX XX; ret → C3
+            if (code[0] == 0x8B && code[1] == 0x81 && code[6] == 0xC3) {
+                return static_cast<int>(*reinterpret_cast<const std::uint32_t*>(code + 2));
+            }
+            return -1;
+        }
+
+        // Directly zero a pointer-sized field inside a widget at the given byte offset,
+        // bypassing the engine's setter (which tries to free the old value).
+        void ZeroWidgetField(void* widget, int offset) {
+            if (widget == nullptr || offset < 0) {
+                return;
+            }
+            auto* field = reinterpret_cast<void**>(
+                reinterpret_cast<std::uintptr_t>(widget) + static_cast<std::uintptr_t>(offset)
+            );
+            *field = nullptr;
+        }
+
+        // Recursively walk the widget tree and directly zero Presentation (and HitArea)
+        // pointer fields so the engine's Widget destructor does not try to free
+        // objects that are shared with (and owned by) donor screens.
+        // Uses raw memory writes — the engine's SetPresentation frees the old value,
+        // which crashes because the Presentation is shared or already freed.
+        void ClearAllPresentationsInTree(State& state, void* widget, int presentationOffset, int hitAreaOffset) {
+            if (widget == nullptr) {
+                return;
+            }
+
+            ZeroWidgetField(widget, presentationOffset);
+            ZeroWidgetField(widget, hitAreaOffset);
+
+            if (state.findWidgetExtension == nullptr) {
+                return;
+            }
+            void* ext = state.findWidgetExtension(widget, kDrawChildrenExtensionId);
+            if (ext == nullptr) {
+                return;
+            }
+
+            const std::uintptr_t extAddr = reinterpret_cast<std::uintptr_t>(ext);
+            void** children = *reinterpret_cast<void***>(extAddr + 0x1Cu);
+            const unsigned int count = *reinterpret_cast<const unsigned int*>(extAddr + 0x20u);
+
+            for (unsigned int i = 0u; i < count; ++i) {
+                ClearAllPresentationsInTree(state, children[i], presentationOffset, hitAreaOffset);
+            }
+        }
+
+        // Clear shared Presentation pointers on the overlay's entire widget tree
+        // so the engine does not double-free them when it destroys our screen.
+        void DetachSharedPresentations(State& state, void* screen) {
+            if (screen == nullptr || state.screenGetRootWidget == nullptr) {
+                return;
+            }
+
+            const int presentationOffset = ExtractGetterOffset(
+                reinterpret_cast<void*>(state.widgetGetPresentation)
+            );
+            const int hitAreaOffset = ExtractGetterOffset(
+                reinterpret_cast<void*>(state.widgetGetHitArea)
+            );
+
+            if (presentationOffset < 0) {
+                LogError("CoH Mod Config UI: Could not determine Presentation field offset — skipping detach.");
+                return;
+            }
+
+            void* rootWidget = state.screenGetRootWidget(screen);
+            if (rootWidget != nullptr) {
+                ClearAllPresentationsInTree(state, rootWidget, presentationOffset, hitAreaOffset);
+            }
+        }
+
+
+        void FinalizeOverlayAfterEngineUnload(State& state) {
+            state.screen = nullptr;
+            ResetOverlayProxyStorage(state);
+            ResetOverlayHandles(state);
+            state.overlayBuilt = false;
+            state.overlayVisible = false;
+            state.overlayUnloadInProgress = false;
+        }
+
 
         void* CreateRawWidgetByType(State& state, const char* widgetTypeName) {
             if ((state.widgetFactoryCreateAddress == nullptr) || (widgetTypeName == nullptr)) {
@@ -4383,25 +4527,19 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            if (state.overlayBuilt) {
-                for (std::size_t i = kVisibleRowCount; i > 0u; --i) {
-                    DestroyNativeRowSlider(state, i - 1u);
-                    state.genericWidgetDtor(state.rowSliders[i - 1u].Get());
-                    state.checkButtonDtor(state.rowCheckButtons[i - 1u].Get());
-                    state.buttonDtor(state.rowArrowButtons[i - 1u].Get());
-                    state.textLabelDtor(state.rowValueLabels[i - 1u].Get());
-                    state.textLabelDtor(state.rowLabels[i - 1u].Get());
-                }
-
-                state.buttonDtor(state.modSelectorButton.Get());
-                state.textLabelDtor(state.modSelectorValueLabel.Get());
-                state.textLabelDtor(state.titleLabel.Get());
-            }
-
             ScreenManagerHandle* const screenManager = GetScreenManager(state);
             if ((state.screen != nullptr) && (screenManager != nullptr) && (state.unloadScreen != nullptr)) {
+                for (std::size_t rowIndex = 0u; rowIndex < kVisibleRowCount; ++rowIndex) {
+                    if (state.rowNativeSliderInitialized[rowIndex]) {
+                        DestroyNativeRowSlider(state, rowIndex);
+                    }
+                }
+                if (state.screenSetHidden != nullptr) {
+                    state.screenSetHidden(state.screen, true);
+                }
+                DetachSharedPresentations(state, state.screen);
                 state.unloadScreen(screenManager, state.screen);
-                state.screen = nullptr;
+                FinalizeOverlayAfterEngineUnload(state);
             }
 
             ResetOverlayHandles(state);
@@ -4597,6 +4735,7 @@ namespace ConfigUi::Frontend {
             state.activeEnumDropDownRowIndex = -1;
             state.panelScrollBarPageUpWasActive = false;
             state.panelScrollBarPageDownWasActive = false;
+            state.overlayDestroyPending = false;
             state.setTopMost(screenManager, true);
             state.activateScreen(screenManager, state.screen, kDefaultScreenActivationType, false);
             state.overlayVisible = true;
@@ -4625,6 +4764,24 @@ namespace ConfigUi::Frontend {
             state.activeEnumDropDownRowIndex = -1;
             state.panelScrollBarPageUpWasActive = false;
             state.panelScrollBarPageDownWasActive = false;
+            state.overlayDestroyPending = false;
+            RemoveGameWindowHook(state);
+            if ((state.screen != nullptr) && (state.screenSetHidden != nullptr)) {
+                state.screenSetHidden(state.screen, true);
+            }
+            // Clear all shared Presentation pointers now, before the engine's
+            // Flush gets a chance to destroy widgets and double-free them.
+            DetachSharedPresentations(state, state.screen);
+            // Hand the screen off to the retired-screen slot so
+            // HookedUnloadScreen can intercept the engine's native
+            // teardown.  Do NOT zero proxy storage here — the engine
+            // still owns the widget tree and will traverse it during
+            // Flush (inside the next ScreenManager::Update).  Cleaning
+            // up before UnloadScreen completes causes the engine to
+            // follow stale pointers into zeroed storage and crash.
+            state.retiredScreen = state.screen;
+            state.screen = nullptr;
+            state.overlayBuilt = false;
         }
 
         void ToggleMenuOverlay(State& state, ScreenManagerHandle* screenManager) {
@@ -5107,6 +5264,61 @@ namespace ConfigUi::Frontend {
 
             HandleUiTick(state);
         }
+
+        void __fastcall HookedUnloadScreen(ScreenManagerHandle* screenManager, void*, void* screen) {
+            State& state = GetState();
+
+            if ((screen != nullptr) && (screen == state.screen)) {
+                if (state.overlayUnloadInProgress) {
+                    return;
+                }
+
+                LogInfo("CoH Mod Config UI: Preparing the custom overlay screen for native unload.");
+                state.overlayUnloadInProgress = true;
+                state.overlayVisible = false;
+                state.overlayDestroyPending = false;
+                RemoveGameWindowHook(state);
+                if (state.screenSetHidden != nullptr) {
+                    state.screenSetHidden(screen, true);
+                }
+                DetachSharedPresentations(state, screen);
+                if (state.originalUnloadScreen != nullptr) {
+                    state.originalUnloadScreen(screenManager, screen);
+                }
+                for (auto& slider : state.rowNativeSliders) {
+                    slider.storage.fill(std::byte { 0 });
+                }
+                FinalizeOverlayAfterEngineUnload(state);
+                return;
+            }
+
+            if ((screen != nullptr) && (screen == state.retiredScreen)) {
+                LogInfo("CoH Mod Config UI: Observed native unload of the retired overlay screen.");
+                state.retiredScreen = nullptr;
+
+                DetachSharedPresentations(state, screen);
+                if (state.originalUnloadScreen != nullptr) {
+                    state.originalUnloadScreen(screenManager, screen);
+                }
+
+                // The engine is done with the widget tree — safe to zero all proxy storage now,
+                // but only if no new overlay was created in the meantime (the new overlay
+                // would be using the same static proxy storage arrays).
+                if (!state.overlayBuilt) {
+                    for (auto& slider : state.rowNativeSliders) {
+                        slider.storage.fill(std::byte { 0 });
+                    }
+                    ResetOverlayProxyStorage(state);
+                    ResetOverlayHandles(state);
+                }
+                return;
+            }
+
+            if (state.originalUnloadScreen != nullptr) {
+                state.originalUnloadScreen(screenManager, screen);
+            }
+        }
+
     }
 
     bool Install(Catalog* catalog) {
@@ -5134,6 +5346,8 @@ namespace ConfigUi::Frontend {
         state.pendingMouseWheelDelta = 0;
         state.toggleInputObserved = false;
         state.fileOverrideRegistered = false;
+        state.screen = nullptr;
+        state.retiredScreen = nullptr;
         ResetOverlayHandles(state);
 
         if (!ResolveInterop(state)) {
@@ -5146,9 +5360,6 @@ namespace ConfigUi::Frontend {
             LogError("CoH Mod Config UI failed to resolve the F10 input key.");
             return false;
         }
-
-        InstallGameWindowHook(state);
-
 
         if (!ModSDK::Hooks::CreateHook(
             state.screenManagerUpdateTarget,
@@ -5163,6 +5374,20 @@ namespace ConfigUi::Frontend {
             return false;
         }
 
+        if (!ModSDK::Hooks::CreateHook(
+            state.unloadScreenTarget,
+            reinterpret_cast<void*>(&HookedUnloadScreen),
+            reinterpret_cast<void**>(&state.originalUnloadScreen))) {
+            LogError("CoH Mod Config UI failed to create the ScreenManager::UnloadScreen hook.");
+            return false;
+        }
+
+        if (!ModSDK::Hooks::EnableHook(state.unloadScreenTarget)) {
+            LogError("CoH Mod Config UI failed to enable the ScreenManager::UnloadScreen hook.");
+            return false;
+        }
+
+        state.unloadScreen = state.originalUnloadScreen;
         state.installed = true;
         LogInfo("CoH Mod Config UI installed. F10 toggles the menu.");
 
@@ -5185,6 +5410,9 @@ namespace ConfigUi::Frontend {
         if (state.screenManagerUpdateTarget != nullptr) {
             ModSDK::Hooks::DisableHook(state.screenManagerUpdateTarget);
         }
+        if (state.unloadScreenTarget != nullptr) {
+            ModSDK::Hooks::DisableHook(state.unloadScreenTarget);
+        }
 
         // Unload our screens from the ScreenManager so the engine doesn't try to
         // iterate/destroy our widget tree during its own shutdown. The widgets are
@@ -5201,19 +5429,30 @@ namespace ConfigUi::Frontend {
             }
 
             if (state.screen != nullptr) {
+                if (state.screenSetHidden != nullptr) {
+                    state.screenSetHidden(state.screen, true);
+                }
+                DetachSharedPresentations(state, state.screen);
                 state.unloadScreen(screenManager, state.screen);
-                state.screen = nullptr;
+                for (auto& slider : state.rowNativeSliders) {
+                    slider.storage.fill(std::byte { 0 });
+                }
+                FinalizeOverlayAfterEngineUnload(state);
+            }
+
+            if (state.retiredScreen != nullptr) {
+                DetachSharedPresentations(state, state.retiredScreen);
+                state.unloadScreen(screenManager, state.retiredScreen);
+                state.retiredScreen = nullptr;
+                for (auto& slider : state.rowNativeSliders) {
+                    slider.storage.fill(std::byte { 0 });
+                }
             }
 
             state.fileOverrideRegistered = false;
         }
 
-        if ((state.gameWindowHandle != nullptr) && (state.originalGameWindowProc != nullptr) && IsWindow(state.gameWindowHandle)) {
-            SetWindowLongPtr(state.gameWindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(state.originalGameWindowProc));
-        }
-        state.gameWindowHandle = nullptr;
-        state.originalGameWindowProc = nullptr;
-        state.pendingMouseWheelDelta = 0;
+        RemoveGameWindowHook(state);
         state.modSelectorDropDownOpen = false;
         state.activeEnumDropDownRowIndex = -1;
 
