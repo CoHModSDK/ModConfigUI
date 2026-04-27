@@ -1,0 +1,2561 @@
+Screen =
+{
+	version = 4,
+	native_aspect = 1.77778,
+	Widgets =
+	{
+		type = "Group",
+		name = "cohmodconfigui_root",
+		position =
+		{
+			0,
+			0,
+		},
+		HitArea =
+		{
+
+			{
+				type = "Rectangle",
+				size =
+				{
+					1,
+					1,
+				},
+				position =
+				{
+					0,
+					0,
+				},
+			},
+		},
+		Children =
+		{
+			{
+				visible = false,
+				type = "ArtLabel",
+				style =
+				{
+					"DefaultEngineStyles",
+					"defStyleLabel",
+				},
+				name = "cohmodconfigui_panelscrolltrack",
+				position =
+				{
+					0.71000,
+					0.19000,
+				},
+				size =
+				{
+					0.02500,
+					0.23800,
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								18,
+								18,
+								18,
+								150,
+							},
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							rectangleType = "Border",
+							colour =
+							{
+								235,
+								235,
+								235,
+								180,
+							},
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+			},
+			{
+				visible = false,
+				type = "ArtLabel",
+				style =
+				{
+					"DefaultEngineStyles",
+					"defStyleLabel",
+				},
+				name = "cohmodconfigui_panelscrollthumb",
+				position =
+				{
+					0.71000,
+					0.19000,
+				},
+				size =
+				{
+					0.02500,
+					0.06000,
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\label_box_02",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							rectangleType = "Border",
+							colour =
+							{
+								255,
+								255,
+								255,
+								230,
+							},
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_0",
+				position =
+				{
+					0.47000,
+					0.37000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_1",
+				position =
+				{
+					0.47000,
+					0.43000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_2",
+				position =
+				{
+					0.47000,
+					0.49000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_3",
+				position =
+				{
+					0.47000,
+					0.55000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_4",
+				position =
+				{
+					0.47000,
+					0.61000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_5",
+				position =
+				{
+					0.47000,
+					0.67000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "CheckButton",
+				buttonType = "ClickOnRelease",
+				text = " ",
+				name = "cohmodconfigui_rowcheck_6",
+				position =
+				{
+					0.47000,
+					0.73000,
+				},
+				style =
+				{
+					"DefaultStyles",
+					"defStyleCheckBox",
+				},
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							nameID = "Base",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								255,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_base",
+							states =
+							{
+								"Normal",
+								"Disabled",
+								"Active",
+								"Hover",
+								"Checked",
+								"CheckedDisabled",
+								"CheckedActive",
+								"CheckedHover",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Checked",
+							shadermode = 0,
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Checked",
+								"CheckedHover",
+								"CheckedDisabled",
+							},
+						},
+						{
+							type = "Graphic",
+							nameID = "Active",
+							shadermode = 0,
+							colour = "White",
+							position =
+							{
+								0,
+								0.09936,
+							},
+							size =
+							{
+								0.10000,
+								0.80127,
+							},
+							texture = "art\\ui\\textures\\buttons_icons\\checkbox_butt_top",
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+						{
+							type = "Rectangle",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								150,
+							},
+							position =
+							{
+								0,
+								0.09900,
+							},
+							rectangleType = "Border",
+							size =
+							{
+								0.10000,
+								0.80100,
+							},
+							states =
+							{
+								"Active",
+								"CheckedActive",
+							},
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							0.10000,
+							0.80100,
+						},
+						position =
+						{
+							0,
+							0.09900,
+						},
+					},
+				},
+				size =
+				{
+					0.18750,
+					0.04167,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_0",
+				position =
+				{
+					0.47000,
+					0.25000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_0",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_0",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_1",
+				position =
+				{
+					0.47000,
+					0.31000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_1",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_1",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_2",
+				position =
+				{
+					0.47000,
+					0.37000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_2",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_2",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_3",
+				position =
+				{
+					0.47000,
+					0.43000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_3",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_3",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_4",
+				position =
+				{
+					0.47000,
+					0.49000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_4",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_4",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_5",
+				position =
+				{
+					0.47000,
+					0.55000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_5",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_5",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+			{
+				visible = false,
+				type = "Group",
+				name = "cohmodconfigui_rowslider_6",
+				position =
+				{
+					0.47000,
+					0.61000,
+				},
+				Children =
+				{
+					{
+						type = "ArtLabel",
+						style =
+						{
+							"DefaultEngineStyles",
+							"defStyleLabel",
+						},
+						position =
+						{
+							0.04914,
+							0.00519,
+						},
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bttn_cohmodconfigui_rowslider_6",
+						Presentation =
+						{
+							Art =
+							{
+								{
+									type = "Graphic",
+									size =
+									{
+										0.97056,
+										1.02728,
+									},
+									position =
+									{
+										0.02944,
+										-0.01996,
+									},
+									shadermode = 0,
+									texture = "art\\ui\\textures\\textures_fe\\slider_bttn_000",
+									states =
+									{
+										"Normal",
+										"Active",
+										"Hover",
+										"Disabled",
+									},
+								},
+							},
+						},
+						size =
+						{
+							0.01635,
+							0.04524,
+						},
+					},
+					{
+						type = "Custom",
+						customProperties = "",
+						HitArea =
+						{
+							{
+								type = "Rectangle",
+								size =
+								{
+									1,
+									1,
+								},
+								position =
+								{
+									0,
+									0,
+								},
+							},
+						},
+						name = "slider_bar_cohmodconfigui_rowslider_6",
+						position =
+						{
+							0,
+							0,
+						},
+						yAlignToParent = "Stretch",
+						xAlignToParent = "Stretch",
+						size =
+						{
+							0.14858,
+							0.05416,
+						},
+					},
+				},
+				HitArea =
+				{
+					{
+						type = "Rectangle",
+						size =
+						{
+							1,
+							1,
+						},
+						position =
+						{
+							0,
+							0,
+						},
+					},
+				},
+				style =
+				{
+					"CoH_Engine_Final",
+					"SliderBar_000",
+				},
+				tooltip_name = "basic_tooltip",
+				Presentation =
+				{
+					Art =
+					{
+						{
+							type = "Graphic",
+							shadermode = 0,
+							colour =
+							{
+								255,
+								255,
+								255,
+								100,
+							},
+							position =
+							{
+								-0.05224,
+								0.02823,
+							},
+							size =
+							{
+								0.99702,
+								0.34796,
+							},
+							texture = "art\\ui\\textures\\textures_fe\\slider_meter_01",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+						{
+							type = "Graphic",
+							size =
+							{
+								0.90173,
+								0.38184,
+							},
+							position =
+							{
+								0.04865,
+								0.26938,
+							},
+							shadermode = 0,
+							texture = "art\\ui\\textures\\textures_fe\\slider_bg",
+							states =
+							{
+								"Normal",
+								"Active",
+								"Hover",
+								"Disabled",
+							},
+						},
+					},
+				},
+				size =
+				{
+					0.14858,
+					0.05416,
+				},
+			},
+		},
+		size =
+		{
+			1,
+			1,
+		},
+	},
+}
