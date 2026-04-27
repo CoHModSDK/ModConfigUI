@@ -463,6 +463,7 @@ namespace ConfigUi::Frontend {
             bool updateHookObserved = false;
             bool toggleKeyWasDown = false;
             bool toggleInputObserved = false;
+            bool pendingWindowToggle = false;
             void* screen = nullptr;
             void* retiredScreen = nullptr;
             void* templateDonorScreen = nullptr;
@@ -588,6 +589,14 @@ namespace ConfigUi::Frontend {
 
             if ((message == WM_CLOSE) || (message == WM_QUERYENDSESSION) || (message == WM_DESTROY)) {
                 state.shutdownInProgress = true;
+            }
+
+            if ((wParam == VK_F10) &&
+                ((message == WM_KEYDOWN) || (message == WM_SYSKEYDOWN) || (message == WM_KEYUP) || (message == WM_SYSKEYUP))) {
+                if (((message == WM_KEYDOWN) || (message == WM_SYSKEYDOWN)) && ((lParam & 0x40000000u) == 0)) {
+                    state.pendingWindowToggle = true;
+                }
+                return 0;
             }
 
             if ((message == WM_MOUSEWHEEL) && state.overlayVisible) {
@@ -2089,7 +2098,6 @@ namespace ConfigUi::Frontend {
 
             state.overlayVisible = false;
             ResetOverlayInteractionState(state);
-            RemoveGameWindowHook(state);
 
             if (clearTopMost && (screenManager != nullptr) && (state.setTopMost != nullptr)) {
                 state.setTopMost(screenManager, false);
@@ -5291,7 +5299,17 @@ namespace ConfigUi::Frontend {
 
             ScreenManagerHandle* screenManager = GetScreenManager(state);
             ReleaseRetiredOverlayScreenIfPending(state, screenManager);
-            if (IsEdgePressed(state, state.toggleKey, state.toggleKeyWasDown)) {
+            if ((state.originalGameWindowProc == nullptr) && !state.shutdownInProgress) {
+                InstallGameWindowHook(state);
+            }
+
+            const bool toggleRequestedFromWindow = state.pendingWindowToggle;
+            if (toggleRequestedFromWindow) {
+                state.pendingWindowToggle = false;
+                state.toggleKeyWasDown = true;
+            }
+
+            if (toggleRequestedFromWindow || IsEdgePressed(state, state.toggleKey, state.toggleKeyWasDown)) {
                 if (!state.toggleInputObserved) {
                     LogInfo("CoH Mod Config UI detected the first F10 toggle input.");
                     state.toggleInputObserved = true;
@@ -5581,6 +5599,7 @@ namespace ConfigUi::Frontend {
         state.filePathHdPatchedJneAddress = nullptr;
         state.filePathHdOriginalJneBytes = {};
         state.filePathHdForwardSlashPatchApplied = false;
+        state.pendingWindowToggle = false;
         state.selectedModIndex = 0u;
         state.selectedOptionIndex = 0u;
         state.topVisibleOptionIndex = 0u;
