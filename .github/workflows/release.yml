@@ -26,15 +26,15 @@ jobs:
     - name: Download Build Artifacts
       uses: actions/download-artifact@v4
       with:
-        name: CoHModConfigUI
+        name: ModConfigUI
         path: artifact
 
     - name: Create Release Zip
       run: |
         mkdir -p release
-        cp -a artifact/CoHModConfigUI.dll release/
+        cp -a artifact/ModConfigUI.dll release/
         cd release
-        zip -r ../CoHModConfigUI-${{ github.event.inputs.build-ver }}.zip .
+        zip -r ../ModConfigUI-${{ github.event.inputs.build-ver }}.zip .
         cd ..
 
     - name: Create GitHub Release
@@ -45,7 +45,7 @@ jobs:
         tag_name: ${{ github.event.inputs.build-ver }}
         name: ${{ github.event.inputs.build-ver }}
         files: |
-          CoHModConfigUI-${{ github.event.inputs.build-ver }}.zip
+          ModConfigUI-${{ github.event.inputs.build-ver }}.zip
         draft: false
         prerelease: false
         make_latest: true

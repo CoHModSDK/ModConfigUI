@@ -34,6 +34,6 @@ jobs:
     - name: Archive Build Artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: CoHModConfigUI
+        name: ModConfigUI
         path: _build/bin/${{ env.BUILD_CONFIGURATION }}/${{ env.BUILD_ARCHITECTURE }}/*
         retention-days: 1
