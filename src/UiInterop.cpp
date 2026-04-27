@@ -675,9 +675,7 @@ namespace ConfigUi::Frontend {
         bool TryGetVisibleRowOption(State& state, std::size_t rowIndex, SelectedOptionRef& outSelectedOption);
         float ComputeListBoxHeightFromItemCount(std::size_t itemCount, float itemHeight);
         float ComputeRowListBoxHeight(const OptionEntry& optionEntry);
-#if defined(_M_IX86)
         void __cdecl CallWithEaxContext0(void* eaxContext, void* targetFn);
-#endif
 
         void LogInfo(const std::string& message) {
             ModSDK::Runtime::LogInfo(message.c_str());
@@ -2155,7 +2153,6 @@ namespace ConfigUi::Frontend {
             }
 
             void* widget = nullptr;
-#if defined(_M_IX86)
             void* createFunction = state.widgetFactoryCreateAddress;
             __asm {
                 mov edi, widgetTypeName
@@ -2164,10 +2161,6 @@ namespace ConfigUi::Frontend {
                 call eax
                 mov widget, eax
             }
-#else
-            (void)state;
-            (void)widgetTypeName;
-#endif
             return widget;
         }
 
@@ -3294,14 +3287,8 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-#if defined(_M_IX86)
             CallWithEaxContext0(nativeSlider.Get(), state.nativeSliderBindInputAddress);
             return true;
-#else
-            (void)state;
-            (void)nativeSlider;
-            return false;
-#endif
         }
 
         bool InitializeNativeRowSlider(State& state, std::size_t rowIndex) {
@@ -3365,7 +3352,6 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-#if defined(_M_IX86)
             void* addRenderChildFunction = state.addRenderChildAddress;
             __asm {
                 mov edi, parentRenderObject
@@ -3375,13 +3361,6 @@ namespace ConfigUi::Frontend {
                 call eax
             }
             return true;
-#else
-            (void)state;
-            (void)parentRenderObject;
-            (void)childWidget;
-            (void)insertionIndex;
-            return false;
-#endif
         }
 
         bool AttachRenderChild(State& state, void* parentWidget, void* childWidget) {
@@ -3720,7 +3699,6 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
-#if defined(_M_IX86)
         __declspec(naked) void __cdecl CallWithEaxContext0(void* /*eaxContext*/, void* /*targetFn*/) {
             __asm {
                 push esi
@@ -3795,7 +3773,6 @@ namespace ConfigUi::Frontend {
                 ret
             }
         }
-#endif
 
         bool ApplyWidgetStyle(State& state, void* rawWidget, const char* styleSetName, const char* styleName) {
             if ((rawWidget == nullptr) || (styleSetName == nullptr) || (styleName == nullptr) ||
@@ -3814,7 +3791,6 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-#if defined(_M_IX86)
             void* findStyleSetFn = reinterpret_cast<void*>(state.userInterfaceBase + kFindStyleSetRva);
             void* findStyleFn = reinterpret_cast<void*>(state.userInterfaceBase + kFindStyleInSetRva);
 
@@ -3841,10 +3817,6 @@ namespace ConfigUi::Frontend {
             applyFn(style, rawWidget);
 
             return true;
-#else
-            (void)styleManager;
-            return false;
-#endif
         }
 
         bool TrySetTextLabel(State& state, OpaqueTextLabel& textLabel, const std::string& text, bool multiline) {
