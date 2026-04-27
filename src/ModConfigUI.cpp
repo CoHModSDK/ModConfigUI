@@ -6,8 +6,8 @@
 #include <string>
 
 namespace {
-    constexpr char kModId[] = "de.tosox.cohmodconfigui";
-    constexpr char kModName[] = "CoH Mod Config UI";
+    constexpr char kModId[] = "de.tosox.modconfigui";
+    constexpr char kModName[] = "Mod Config UI";
     constexpr char kModVersion[] = "0.1.0";
     constexpr char kModAuthor[] = "Tosox";
     constexpr char kTestCategory[] = "UI Test";
@@ -39,7 +39,7 @@ namespace {
         }
 
         LogInfo(
-            "CoH Mod Config UI test option updated: " +
+            "Mod Config UI test option updated: " +
             std::string(modId) +
             "." +
             optionId +
@@ -238,7 +238,7 @@ namespace {
 
     bool OnInitialize() {
         if (!RegisterTestSchema()) {
-            ModSDK::Dialogs::ShowError("Failed to register the CoH Mod Config UI test configuration schema.");
+            ModSDK::Dialogs::ShowError("Failed to register the Mod Config UI test configuration schema.");
             return false;
         }
 
@@ -248,7 +248,7 @@ namespace {
         }
 
         LogInfo(
-            "CoH Mod Config UI cataloged " +
+            "Mod Config UI cataloged " +
             std::to_string(gCatalog.GetModCount()) +
             " mods and " +
             std::to_string(gCatalog.GetOptionCount()) +
@@ -256,11 +256,11 @@ namespace {
         );
 
         if (!ConfigUi::Frontend::Install(&gCatalog)) {
-            ModSDK::Dialogs::ShowError("Failed to install the CoH Mod Config UI frontend bridge.");
+            ModSDK::Dialogs::ShowError("Failed to install the Mod Config UI frontend bridge.");
             return false;
         }
 
-        LogInfo("CoH Mod Config UI initialized with built-in test options");
+        LogInfo("Mod Config UI initialized with built-in test options");
         return true;
     }
 

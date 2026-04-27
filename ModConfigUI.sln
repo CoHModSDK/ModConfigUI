@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.13.35825.156 d17.13
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CoHModConfigUI", "CoHModConfigUI.vcxproj", "{21002190-9E4B-40BF-902F-BD5C5497A891}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ModConfigUI", "ModConfigUI.vcxproj", "{21002190-9E4B-40BF-902F-BD5C5497A891}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -80,10 +80,10 @@ BEGIN
             VALUE "CompanyName", "Tosox"
             VALUE "FileDescription", "Adds an ingame menu for mod settings configuration"
             VALUE "FileVersion", "0.1.0"
-            VALUE "InternalName", "CoHModConfigUI"
+            VALUE "InternalName", "ModConfigUI"
             VALUE "LegalCopyright", "Copyright © 2026"
-            VALUE "OriginalFilename", "CoHModConfigUI.dll"
-            VALUE "ProductName", "CoHModConfigUI"
+            VALUE "OriginalFilename", "ModConfigUI.dll"
+            VALUE "ProductName", "ModConfigUI"
             VALUE "ProductVersion", "0.1.0"
         END
     END

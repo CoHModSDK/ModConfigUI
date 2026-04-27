@@ -28,7 +28,7 @@
     <ClCompile Include="src\dllmain.cpp">
       <Filter>src</Filter>
     </ClCompile>
-    <ClCompile Include="src\CoHModConfigUI.cpp">
+    <ClCompile Include="src\ModConfigUI.cpp">
       <Filter>src</Filter>
     </ClCompile>
     <ClCompile Include="src\ConfigCatalog.cpp">

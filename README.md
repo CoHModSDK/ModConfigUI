@@ -1,20 +1,19 @@
-# FactionFix Loader
+# Mod Config UI
 
 ## 📜 Description
 
-FactionFix Loader is a helper mod for `Company of Heroes Relaunch` built on top of `CoHModSDK` which
-loads the `FactionFix.dll` library.
+Mod Config UI is a mod for `Company of Heroes Relaunch` built on top of `CoHModSDK` which adds an ingame menu for mod settings configuration.
 
 ## 🔧 Installation
 
 1. Install the `CoHModSDK` loader in your game directory
-2. Copy `FactionFixLoader.dll` into the `mods` folder
-3. Add `FactionFixLoader.dll` to `CoHModSDKLoader.ini`
+2. Copy `ModConfigUI.dll` into the `mods` folder
+3. Add `ModConfigUI.dll` to `CoHModSDKLoader.ini`
 4. Start the game
 
 ## 🛠️ Building
 
-If you want to build the mod yourself, open the solution in Visual Studio 2022 and build `Release|x86`.
+If you want to build the mod yourself, open the solution in Visual Studio and build `Release|x86`.
 
 ## 📄 License
 
