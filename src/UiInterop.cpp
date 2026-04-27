@@ -182,6 +182,11 @@ namespace ConfigUi::Frontend {
         constexpr std::size_t kNativeSliderMinValueOffset = 0x208u;
         constexpr std::size_t kNativeSliderMaxValueOffset = 0x20Cu;
         constexpr float kSliderProgressEpsilon = 0.0005f;
+        constexpr const char* kBlockedOverlayScreenNames[] = {
+            "gameloadscreen",
+            "apploadingform",
+            "apprestartingform",
+        };
 
         using ScreenManagerHandle = void;
         using StyleManagerHandle = void;
@@ -195,6 +200,7 @@ namespace ConfigUi::Frontend {
         using ActivateScreenFn = void(__thiscall*)(ScreenManagerHandle* manager, void* screen, int activationType, bool skipTransition);
         using DeactivateAllScreensFn = void(__thiscall*)(ScreenManagerHandle* manager);
         using DeactivateScreenFn = void(__thiscall*)(ScreenManagerHandle* manager, void* screen);
+        using IsScreenActiveByNameFn = bool(__thiscall*)(const ScreenManagerHandle* manager, const char* screenName);
         using CreateBlankScreenFn = void* (__thiscall*)(ScreenManagerHandle* manager);
         using SetTopMostFn = void(__thiscall*)(ScreenManagerHandle* manager, bool topMost);
         using ScreenSetNameFn = void(__thiscall*)(void* screen, const char* name);
@@ -389,6 +395,7 @@ namespace ConfigUi::Frontend {
             UnloadScreenFn originalUnloadScreen = nullptr;
             ActivateScreenFn activateScreen = nullptr;
             DeactivateScreenFn deactivateScreen = nullptr;
+            IsScreenActiveByNameFn isScreenActiveByName = nullptr;
             CreateBlankScreenFn createBlankScreen = nullptr;
             SetTopMostFn setTopMost = nullptr;
             ScreenSetNameFn screenSetName = nullptr;
@@ -1518,6 +1525,7 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?ActivateScreen@ScreenManager@UI@@QAEXPAVScreen@2@W4ScreenActivationType@12@_N@Z", state.activateScreen) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?DeactivateAllScreens@ScreenManager@UI@@QAEXXZ", state.deactivateAllScreensTarget) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?DeactivateScreen@ScreenManager@UI@@QAEXPAVScreen@2@@Z", state.deactivateScreen) &&
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?IsScreenActive@ScreenManager@UI@@QBE_NPBD@Z", state.isScreenActiveByName) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetTopMost@ScreenManager@UI@@QAEX_N@Z", state.setTopMost) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetName@Screen@UI@@QAEXPBD@Z", state.screenSetName) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetRootWidget@Screen@UI@@QAEPAVWidget@2@XZ", state.screenGetRootWidget) &&
@@ -2110,6 +2118,8 @@ namespace ConfigUi::Frontend {
             if (detachPresentations) {
                 DetachSharedPresentations(state, screen);
             }
+            state.templateDonorScreen = nullptr;
+            state.optionsMenuDonorScreen = nullptr;
             state.retiredScreen = screen;
             if (state.screen == screen) {
                 state.screen = nullptr;
@@ -3707,6 +3717,20 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
+        const char* GetBlockedOverlayScreenName(State& state, ScreenManagerHandle* screenManager) {
+            if ((screenManager == nullptr) || (state.isScreenActiveByName == nullptr)) {
+                return nullptr;
+            }
+
+            for (const char* screenName : kBlockedOverlayScreenNames) {
+                if ((screenName != nullptr) && state.isScreenActiveByName(screenManager, screenName)) {
+                    return screenName;
+                }
+            }
+
+            return nullptr;
+        }
+
         __declspec(naked) void __cdecl CallWithEaxContext0(void* /*eaxContext*/, void* /*targetFn*/) {
             __asm {
                 push esi
@@ -4916,6 +4940,20 @@ namespace ConfigUi::Frontend {
 
             if ((state.activateScreen == nullptr) || (state.deactivateScreen == nullptr) || (state.setTopMost == nullptr)) {
                 LogError("CoH Mod Config UI cannot activate: pointer-based ScreenManager helpers unavailable.");
+                return;
+            }
+
+            if (state.overlayUnloadInProgress || (state.retiredScreen != nullptr)) {
+                LogInfo("CoH Mod Config UI: overlay teardown is still pending; refusing to reopen the menu yet.");
+                return;
+            }
+
+            if (const char* blockedScreenName = GetBlockedOverlayScreenName(state, screenManager)) {
+                LogInfo(
+                    "CoH Mod Config UI: screen '" +
+                    std::string(blockedScreenName) +
+                    "' is active; refusing to open the menu in this UI context."
+                );
                 return;
             }
 
