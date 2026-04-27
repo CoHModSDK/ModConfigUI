@@ -2114,6 +2114,8 @@ namespace ConfigUi::Frontend {
 
         void FinalizeOverlayAfterEngineUnload(State& state) {
             state.screen = nullptr;
+            state.templateDonorScreen = nullptr;
+            state.optionsMenuDonorScreen = nullptr;
             ResetOverlayHandles(state);
             state.overlayBuilt = false;
             state.overlayVisible = false;
@@ -3482,7 +3484,13 @@ namespace ConfigUi::Frontend {
             }
         }
 
-        bool TransferDonorPresentationFrom(State& state, void* targetRawWidget, const char* donorScreenName, const char* donorWidgetName) {
+        bool TransferDonorPresentationFrom(
+            State& state,
+            void* targetRawWidget,
+            const char* donorScreenName,
+            const char* donorWidgetName,
+            bool allowNullPresentation = false
+        ) {
             if ((targetRawWidget == nullptr) ||
                 (donorScreenName == nullptr) ||
                 (donorWidgetName == nullptr) ||
@@ -3523,11 +3531,21 @@ namespace ConfigUi::Frontend {
                 if (presentation != nullptr) {
                     state.widgetSetPresentation(targetRawWidget, presentation);
                 }
+                else if (allowNullPresentation) {
+                    state.widgetSetPresentation(targetRawWidget, nullptr);
+                }
+                else {
+                    cleanup();
+                    return false;
+                }
 
                 if (state.widgetGetHitArea != nullptr && state.widgetSetHitArea != nullptr) {
                     void* hitArea = state.widgetGetHitArea(donorRawWidget);
                     if (hitArea != nullptr) {
                         state.widgetSetHitArea(targetRawWidget, hitArea);
+                    }
+                    else if (allowNullPresentation) {
+                        state.widgetSetHitArea(targetRawWidget, nullptr);
                     }
                 }
             }
@@ -3595,6 +3613,19 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
+            const char* donorScreenName = nullptr;
+            if (donorScreen == state.templateDonorScreen) {
+                donorScreenName = kTemplateScreenName;
+            }
+            else if (donorScreen == state.optionsMenuDonorScreen) {
+                donorScreenName = kOptionsmenuDonorScreenName;
+            }
+
+            if ((donorScreenName != nullptr) &&
+                TransferDonorPresentationFrom(state, targetRawWidget, donorScreenName, donorWidgetName, allowNullPresentation)) {
+                return true;
+            }
+
             void* rootWidget = state.screenGetRootWidget(donorScreen);
             if (rootWidget == nullptr) {
                 LogError("CoH Mod Config UI: donor screen has no root widget.");
@@ -3634,6 +3665,56 @@ namespace ConfigUi::Frontend {
             if (state.widgetGetHitArea != nullptr && state.widgetSetHitArea != nullptr) {
                 void* hitArea = state.widgetGetHitArea(donorRawWidget);
                 state.widgetSetHitArea(targetRawWidget, hitArea);
+            }
+
+            return true;
+        }
+
+        bool HasRequiredDonorWidget(State& state, void* donorScreen, const char* donorScreenName, const char* donorWidgetName) {
+            if ((donorScreen == nullptr) || (donorScreenName == nullptr) || (donorWidgetName == nullptr)) {
+                return false;
+            }
+
+            void* rootWidget = GetScreenRootWidget(state, donorScreen);
+            if (rootWidget == nullptr) {
+                LogWarning(
+                    "CoH Mod Config UI: donor screen '" + std::string(donorScreenName) +
+                    "' is missing its root widget; refusing to build the overlay yet."
+                );
+                return false;
+            }
+
+            if (FindWidgetInTree(state, rootWidget, donorWidgetName) == nullptr) {
+                LogWarning(
+                    "CoH Mod Config UI: donor widget '" + std::string(donorWidgetName) +
+                    "' is not ready in screen '" + std::string(donorScreenName) +
+                    "'; refusing to build the overlay yet."
+                );
+                return false;
+            }
+
+            return true;
+        }
+
+        bool EnsureOverlayDonorsReady(State& state) {
+            if (!EnsureDonorScreenLoaded(state, state.templateDonorScreen, kTemplateScreenName)) {
+                return false;
+            }
+            if (!HasRequiredDonorWidget(state, state.templateDonorScreen, kTemplateScreenName, kTemplatePanelWidgetName) ||
+                !HasRequiredDonorWidget(state, state.templateDonorScreen, kTemplateScreenName, kTemplateLabelWidgetName)) {
+                state.templateDonorScreen = nullptr;
+                return false;
+            }
+
+            if (!EnsureDonorScreenLoaded(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName)) {
+                return false;
+            }
+            if (!HasRequiredDonorWidget(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName, kDropdownDonorWidgetName) ||
+                !HasRequiredDonorWidget(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName, kDropdownLabelDonorWidgetName) ||
+                !HasRequiredDonorWidget(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName, kDropdownButtonDonorWidgetName) ||
+                !HasRequiredDonorWidget(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName, kDropdownListBoxDonorWidgetName)) {
+                state.optionsMenuDonorScreen = nullptr;
+                return false;
             }
 
             return true;
@@ -3835,6 +3916,11 @@ namespace ConfigUi::Frontend {
                 (state.textLabelCtor == nullptr) ||
                 (state.widgetProxyBind == nullptr)) {
                 LogError("CoH Mod Config UI cannot build the overlay because one or more UI functions are unavailable.");
+                return false;
+            }
+
+            if (!EnsureOverlayDonorsReady(state)) {
+                LogWarning("CoH Mod Config UI: donor UI is not ready; skipping overlay build.");
                 return false;
             }
 
