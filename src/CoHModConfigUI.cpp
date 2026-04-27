@@ -242,11 +242,6 @@ namespace {
             return false;
         }
 
-        LogInfo("CoH Mod Config UI initialized with built-in test options");
-        return true;
-    }
-
-    bool OnModsLoaded() {
         if (!gCatalog.Refresh()) {
             ModSDK::Dialogs::ShowError("Failed to enumerate registered mod configuration schemas.");
             return false;
@@ -265,6 +260,7 @@ namespace {
             return false;
         }
 
+        LogInfo("CoH Mod Config UI initialized with built-in test options");
         return true;
     }
 
@@ -281,7 +277,6 @@ namespace {
         kModVersion,
         kModAuthor,
         &OnInitialize,
-        &OnModsLoaded,
         &OnShutdown,
     };
 }

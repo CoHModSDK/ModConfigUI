@@ -25,6 +25,8 @@ namespace ConfigUi::Frontend {
         constexpr char kFilePathHDCreateExport[] = "?Create@FilePathHD@@SGPAV1@PB_WW4StreamMode@@@Z";
         // FilePath::AddAlias(char const*, char const*, long, Source*) -> bool  (__stdcall)
         constexpr char kFilePathAddAliasExport[] = "?AddAlias@FilePath@@SG_NPBD0JPAVSource@1@@Z";
+        // FilePath::RemoveAlias(char const*, char const*) -> bool  (__stdcall)
+        constexpr char kFilePathRemoveAliasExport[] = "?RemoveAlias@FilePath@@SG_NPBD0@Z";
         constexpr long kFileOverridePriority = 100;
         constexpr int kStreamModeRead = 1;
         constexpr char kFileOverrideAlias[] = "DATA";
@@ -34,6 +36,7 @@ namespace ConfigUi::Frontend {
 
         using FilePathHDCreateFn = void* (__stdcall*)(const wchar_t* path, int streamMode);
         using FilePathAddAliasFn = bool(__stdcall*)(const char* alias, const char* subPath, long priority, void* source);
+        using FilePathRemoveAliasFn = bool(__stdcall*)(const char* alias, const char* subPath);
         constexpr char kToggleKeyName[] = "F10";
         constexpr std::uintptr_t kCreateBlankScreenRva = 0x00036360u;
         constexpr std::size_t kOpaqueGenericWidgetStorageSize = 16384u;
@@ -164,6 +167,14 @@ namespace ConfigUi::Frontend {
         constexpr float kRowSliderButtonMinPositionX = 0.0f;
         constexpr float kRowSliderButtonMaxPositionX = kRowSliderSizeX - kRowSliderButtonSizeX;
         constexpr std::uintptr_t kNativeSliderBindInputRva = 0x0056D1C0u;
+        // Instruction in RelicCOH.exe that zeroes [0x010d1e68] (the string-template
+        // object pointer) as part of screen destruction cleanup.  When optionsmenu is
+        // kept alive until ScreenManager::~ScreenManager, the destructor triggers this
+        // write and then immediately reads the now-null pointer, causing a crash.
+        // We NOP the instruction so the pointer stays valid through shutdown.
+        // Absolute VA 0x00c07ec1; base 0x007d0000 → RVA 0x00437EC1.
+        constexpr std::uintptr_t kTemplateObjectNullifyRva = 0x00437EC1u;
+        constexpr std::uintptr_t kTemplateObjectPointerRva = 0x00901E68u;
         constexpr std::size_t kNativeSliderKnobProxyOffset = 0x110u;
         constexpr std::size_t kNativeSliderCallbackOffset = 0x1E0u;
         constexpr std::size_t kNativeSliderCurrentValueOffset = 0x200u;
@@ -346,7 +357,9 @@ namespace ConfigUi::Frontend {
 
         struct State {
             Catalog* catalog = nullptr;
+            bool catalogRefreshed = false;
             bool installed = false;
+            bool shutdownInProgress = false;
             bool overlayBuilt = false;
             bool overlayVisible = false;
             bool overlayUnloadInProgress = false;
@@ -440,6 +453,9 @@ namespace ConfigUi::Frontend {
             WidgetGetStateFn widgetGetState = nullptr;
             LocStringCtorFn locStringCtor = nullptr;
             LocStringDtorFn locStringDtor = nullptr;
+            unsigned char* filePathHdPatchedJneAddress = nullptr;
+            std::array<unsigned char, 2> filePathHdOriginalJneBytes = {};
+            bool filePathHdForwardSlashPatchApplied = false;
             void* addRenderChildAddress = nullptr;
             void* widgetFactoryCreateAddress = nullptr;
             void* nativeSliderBindInputAddress = nullptr;
@@ -570,6 +586,10 @@ namespace ConfigUi::Frontend {
         LRESULT CALLBACK HookedGameWindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lParam) {
             State& state = GetState();
 
+            if ((message == WM_CLOSE) || (message == WM_QUERYENDSESSION) || (message == WM_DESTROY)) {
+                state.shutdownInProgress = true;
+            }
+
             if ((message == WM_MOUSEWHEEL) && state.overlayVisible) {
                 const SHORT wheelDelta = GET_WHEEL_DELTA_WPARAM(wParam);
                 if (wheelDelta != 0) {
@@ -622,7 +642,7 @@ namespace ConfigUi::Frontend {
             SetLastError(0);
             auto previousWindowProc = reinterpret_cast<WNDPROC>(
                 SetWindowLongPtr(gameWindowHandle, GWLP_WNDPROC, reinterpret_cast<LONG_PTR>(&HookedGameWindowProc))
-            );
+                );
             if ((previousWindowProc == nullptr) && (GetLastError() != 0)) {
                 return false;
             }
@@ -660,15 +680,15 @@ namespace ConfigUi::Frontend {
 #endif
 
         void LogInfo(const std::string& message) {
-            ModSDK::Runtime::Log(CoHModSDKLogLevel_Info, message.c_str());
+            ModSDK::Runtime::LogInfo(message.c_str());
         }
 
         void LogWarning(const std::string& message) {
-            ModSDK::Runtime::Log(CoHModSDKLogLevel_Warning, message.c_str());
+            ModSDK::Runtime::LogWarning(message.c_str());
         }
 
         void LogError(const std::string& message) {
-            ModSDK::Runtime::Log(CoHModSDKLogLevel_Error, message.c_str());
+            ModSDK::Runtime::LogError(message.c_str());
         }
 
         template <typename T>
@@ -1263,7 +1283,7 @@ namespace ConfigUi::Frontend {
             const float thumbSizeLocalY = (std::min)(
                 (std::max)(kPanelScrollBarMinThumbSizeY, kPanelScrollBarSizeY * visibleFraction),
                 kPanelScrollBarSizeY
-            );
+                );
             const float thumbSizeScreenY = thumbSizeLocalY * kPanelSizeY;
             const float thumbTravelScreenY = (std::max)(0.0f, trackHeight - thumbSizeScreenY);
             const float currentThumbProgress =
@@ -1287,7 +1307,7 @@ namespace ConfigUi::Frontend {
                 std::clamp(targetThumbTop / thumbTravelScreenY, 0.0f, 1.0f);
             const std::size_t newTopVisibleIndex = static_cast<std::size_t>(
                 std::lround(progress * static_cast<float>(maxFirstVisibleIndex))
-            );
+                );
 
             LogInfo(
                 "CoH Mod Config UI: Panel scrollbar click observed at normalized position (" +
@@ -1336,7 +1356,7 @@ namespace ConfigUi::Frontend {
             const float thumbSizeLocalY = (std::min)(
                 (std::max)(kPanelScrollBarMinThumbSizeY, kPanelScrollBarSizeY * visibleFraction),
                 kPanelScrollBarSizeY
-            );
+                );
             const float thumbSizeScreenY = thumbSizeLocalY * kPanelSizeY;
             const float thumbTravelScreenY = (std::max)(0.0f, trackHeight - thumbSizeScreenY);
             const float mouseY = static_cast<float>(state.pendingMouseMoveClientPosition.y) / static_cast<float>(clientHeight);
@@ -1347,7 +1367,7 @@ namespace ConfigUi::Frontend {
                 std::clamp(targetThumbTop / thumbTravelScreenY, 0.0f, 1.0f);
             const std::size_t newTopVisibleIndex = static_cast<std::size_t>(
                 std::lround(progress * static_cast<float>(maxFirstVisibleIndex))
-            );
+                );
             return TrySetOptionWindowTop(state, newTopVisibleIndex);
         }
 
@@ -1641,8 +1661,12 @@ namespace ConfigUi::Frontend {
                 if (fileOpenFn[kForwardSlashJneOffset] == 0x75) {
                     DWORD oldProtect = 0;
                     if (VirtualProtect(fileOpenFn + kForwardSlashJneOffset, 2, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+                        state.filePathHdPatchedJneAddress = fileOpenFn + kForwardSlashJneOffset;
+                        state.filePathHdOriginalJneBytes[0] = fileOpenFn[kForwardSlashJneOffset];
+                        state.filePathHdOriginalJneBytes[1] = fileOpenFn[kForwardSlashJneOffset + 1];
                         fileOpenFn[kForwardSlashJneOffset] = 0x90;
                         fileOpenFn[kForwardSlashJneOffset + 1] = 0x90;
+                        state.filePathHdForwardSlashPatchApplied = true;
                         VirtualProtect(fileOpenFn + kForwardSlashJneOffset, 2, oldProtect, &oldProtect);
                         LogInfo("CoH Mod Config UI patched FilePathHD forward-slash rejection.");
                     }
@@ -1657,6 +1681,58 @@ namespace ConfigUi::Frontend {
 
             state.fileOverrideRegistered = true;
             LogInfo("CoH Mod Config UI registered DATA: file override with priority " + std::to_string(kFileOverridePriority) + ".");
+            return true;
+        }
+
+        bool UnregisterFileOverride(State& state) {
+            if (!state.fileOverrideRegistered) {
+                if (state.filePathHdForwardSlashPatchApplied && (state.filePathHdPatchedJneAddress != nullptr)) {
+                    DWORD oldProtect = 0;
+                    if (VirtualProtect(state.filePathHdPatchedJneAddress, 2, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+                        state.filePathHdPatchedJneAddress[0] = state.filePathHdOriginalJneBytes[0];
+                        state.filePathHdPatchedJneAddress[1] = state.filePathHdOriginalJneBytes[1];
+                        VirtualProtect(state.filePathHdPatchedJneAddress, 2, oldProtect, &oldProtect);
+                        state.filePathHdPatchedJneAddress = nullptr;
+                        state.filePathHdOriginalJneBytes = {};
+                        state.filePathHdForwardSlashPatchApplied = false;
+                        LogInfo("CoH Mod Config UI restored FilePathHD forward-slash rejection.");
+                    }
+                }
+                return true;
+            }
+
+            HMODULE filesystemModule = AcquireModule(kFilesystemModuleName);
+            if (filesystemModule == nullptr) {
+                LogError("CoH Mod Config UI could not load Filesystem.dll to remove the file override.");
+                return false;
+            }
+
+            FilePathRemoveAliasFn filePathRemoveAlias = nullptr;
+            if (!ResolveRequiredExport(filesystemModule, kFilesystemModuleName, kFilePathRemoveAliasExport, filePathRemoveAlias)) {
+                LogError("CoH Mod Config UI could not resolve Filesystem.dll RemoveAlias for file override cleanup.");
+                return false;
+            }
+
+            const bool removed = filePathRemoveAlias(kFileOverrideAlias, kFileOverrideSubPath);
+            if (!removed) {
+                LogError("CoH Mod Config UI failed to remove the DATA: file override alias.");
+                return false;
+            }
+
+            state.fileOverrideRegistered = false;
+            if (state.filePathHdForwardSlashPatchApplied && (state.filePathHdPatchedJneAddress != nullptr)) {
+                DWORD oldProtect = 0;
+                if (VirtualProtect(state.filePathHdPatchedJneAddress, 2, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+                    state.filePathHdPatchedJneAddress[0] = state.filePathHdOriginalJneBytes[0];
+                    state.filePathHdPatchedJneAddress[1] = state.filePathHdOriginalJneBytes[1];
+                    VirtualProtect(state.filePathHdPatchedJneAddress, 2, oldProtect, &oldProtect);
+                    state.filePathHdPatchedJneAddress = nullptr;
+                    state.filePathHdOriginalJneBytes = {};
+                    state.filePathHdForwardSlashPatchApplied = false;
+                    LogInfo("CoH Mod Config UI restored FilePathHD forward-slash rejection.");
+                }
+            }
+            LogInfo("CoH Mod Config UI removed the DATA: file override alias.");
             return true;
         }
 
@@ -1923,7 +1999,7 @@ namespace ConfigUi::Frontend {
             }
             auto* field = reinterpret_cast<void**>(
                 reinterpret_cast<std::uintptr_t>(widget) + static_cast<std::uintptr_t>(offset)
-            );
+                );
             *field = nullptr;
         }
 
@@ -1984,7 +2060,7 @@ namespace ConfigUi::Frontend {
 
         void ZeroNativeSliderStorage(State& state) {
             for (auto& slider : state.rowNativeSliders) {
-                slider.storage.fill(std::byte { 0 });
+                slider.storage.fill(std::byte{ 0 });
             }
         }
 
@@ -1999,6 +2075,8 @@ namespace ConfigUi::Frontend {
             state.panelScrollBarPageUpWasActive = false;
             state.panelScrollBarPageDownWasActive = false;
         }
+
+        void ReleaseDonorScreens(State& state, ScreenManagerHandle* screenManager);
 
         void RetireOverlayScreen(
             State& state,
@@ -2042,20 +2120,30 @@ namespace ConfigUi::Frontend {
             state.overlayUnloadInProgress = false;
         }
 
-        void ReleaseDonorScreens(State& state, ScreenManagerHandle* screenManager) {
-            if ((screenManager == nullptr) || (state.originalUnloadScreen == nullptr)) {
+        void ReleaseRetiredOverlayScreenIfPending(State& state, ScreenManagerHandle* screenManager) {
+            if (state.shutdownInProgress || state.overlayVisible || state.overlayUnloadInProgress) {
                 return;
             }
 
-            if (state.templateDonorScreen != nullptr) {
-                state.originalUnloadScreen(screenManager, state.templateDonorScreen);
-                state.templateDonorScreen = nullptr;
+            if ((screenManager == nullptr) || (state.retiredScreen == nullptr)) {
+                return;
             }
 
-            if (state.optionsMenuDonorScreen != nullptr) {
-                state.originalUnloadScreen(screenManager, state.optionsMenuDonorScreen);
-                state.optionsMenuDonorScreen = nullptr;
+            LogInfo("CoH Mod Config UI: Releasing retired overlay screen on a deferred UI tick.");
+            HookedUnloadScreen(screenManager, nullptr, state.retiredScreen);
+
+            if ((state.retiredScreen == nullptr) && (state.screen == nullptr)) {
+                ReleaseDonorScreens(state, screenManager);
             }
+        }
+
+        void ReleaseDonorScreens(State& state, ScreenManagerHandle* screenManager) {
+            (void)state;
+            (void)screenManager;
+            // Donor screens are intentionally left loaded. Calling originalUnloadScreen
+            // on optionsmenu during an active game session nulls engine-global state
+            // at [010d1e68], which causes a crash when shutdown code reads it later.
+            // The ScreenManager owns these screens and will destroy them at exit.
         }
 
 
@@ -2426,7 +2514,8 @@ namespace ConfigUi::Frontend {
                     displayText +
                     "'."
                 );
-            } else {
+            }
+            else {
                 LogWarning(
                     "CoH Mod Config UI: Failed to set direct fallback text on " + contextLabel +
                     " list item '" +
@@ -2592,7 +2681,8 @@ namespace ConfigUi::Frontend {
                             " could not resolve list item widget '" + itemName +
                             "' after AddItem; falling back to subitem index 0."
                         );
-                    } else {
+                    }
+                    else {
                         listItemTextSubItemIndexResolved = TryResolveListItemTextSubItemIndex(
                             state,
                             itemWidget,
@@ -2619,7 +2709,8 @@ namespace ConfigUi::Frontend {
                     );
                     state.customListBoxItemOldSetText(oldItemProxy, locString.Get());
                     usedNativeItemTextPath = true;
-                } else if (addResult >= 0 && itemWidget != nullptr) {
+                }
+                else if (addResult >= 0 && itemWidget != nullptr) {
                     const bool usedFallbackLabel = EnsureListItemDirectText(
                         state,
                         itemWidget,
@@ -2634,7 +2725,8 @@ namespace ConfigUi::Frontend {
                             "'."
                         );
                     }
-                } else if (addResult >= 0) {
+                }
+                else if (addResult >= 0) {
                     LogWarning(
                         "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
                         " could not resolve list item widget '" + itemName +
@@ -2753,7 +2845,8 @@ namespace ConfigUi::Frontend {
                         listItemTextSubItemIndex
                     );
                     state.customListBoxItemOldSetText(oldItemProxy, locString.Get());
-                } else if ((addResult >= 0) && (itemWidget != nullptr)) {
+                }
+                else if ((addResult >= 0) && (itemWidget != nullptr)) {
                     EnsureListItemDirectText(
                         state,
                         itemWidget,
@@ -2983,7 +3076,7 @@ namespace ConfigUi::Frontend {
                 std::to_string(listBoxSizeY) +
                 " with scrollbar " +
                 (needsScrollBar ? std::string("visible") : std::string("hidden")) +
-                "." 
+                "."
             );
         }
 
@@ -3222,7 +3315,7 @@ namespace ConfigUi::Frontend {
             }
 
             OpaqueNativeSlider& nativeSlider = state.rowNativeSliders[rowIndex];
-            nativeSlider.storage.fill(std::byte { 0 });
+            nativeSlider.storage.fill(std::byte{ 0 });
             state.customWidgetCtor(nativeSlider.Get());
             state.artLabelCtor(nativeSlider.GetKnobProxy());
             state.widgetProxyBind(nativeSlider.Get(), state.rowSliderBarWidgets[rowIndex]);
@@ -3236,7 +3329,7 @@ namespace ConfigUi::Frontend {
             if (!BindNativeRowSliderInput(state, nativeSlider)) {
                 state.artLabelDtor(nativeSlider.GetKnobProxy());
                 state.customWidgetDtor(nativeSlider.Get());
-                nativeSlider.storage.fill(std::byte { 0 });
+                nativeSlider.storage.fill(std::byte{ 0 });
                 return false;
             }
 
@@ -3329,13 +3422,22 @@ namespace ConfigUi::Frontend {
         }
 
         bool EnsureDonorScreenLoaded(State& state, void*& screenSlot, const char* screenName) {
-            if (screenSlot != nullptr) {
-                return true;
-            }
-
             ScreenManagerHandle* const screenManager = GetScreenManager(state);
             if ((screenManager == nullptr) || (state.loadScreenByName == nullptr)) {
                 return false;
+            }
+
+            if (screenSlot != nullptr) {
+                void* rootWidget = GetScreenRootWidget(state, screenSlot);
+                if (rootWidget != nullptr) {
+                    return true;
+                }
+
+                LogWarning(
+                    "CoH Mod Config UI: donor screen '" + std::string(screenName) +
+                    "' lost its root widget; reloading the cached donor screen."
+                );
+                screenSlot = nullptr;
             }
 
             LogInfo("CoH Mod Config UI is loading donor screen: " + std::string(screenName));
@@ -3348,6 +3450,15 @@ namespace ConfigUi::Frontend {
             // Hide the donor screen so it doesn't render on top of the game.
             if (state.screenSetHidden != nullptr) {
                 state.screenSetHidden(screenSlot, true);
+            }
+
+            if (GetScreenRootWidget(state, screenSlot) == nullptr) {
+                LogError(
+                    "CoH Mod Config UI: donor screen '" + std::string(screenName) +
+                    "' loaded without a root widget."
+                );
+                screenSlot = nullptr;
+                return false;
             }
 
             return true;
@@ -3762,7 +3873,8 @@ namespace ConfigUi::Frontend {
                 for (int i = 0; i < 64; ++i) {
                     char c = nameAt4[i];
                     if (c == '\0') break;
-                    if (c < 0x20 || c > 0x7E) { nameBuf[i] = '?'; } else { nameBuf[i] = c; }
+                    if (c < 0x20 || c > 0x7E) { nameBuf[i] = '?'; }
+                    else { nameBuf[i] = c; }
                 }
                 LogInfo(std::string("CoH Mod Config UI: rootWidget+4 name string = '") + nameBuf + "'");
 
@@ -4496,7 +4608,8 @@ namespace ConfigUi::Frontend {
                 if (!TransferDonorPresentationDirect(state, modSelectorScrollBarPageUpButtonWidget, state.optionsMenuDonorScreen, kDropdownListBoxScrollBarPageUpDonorWidgetName, true)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer mod selector scrollbar page-up Presentation from donor.");
                 }
-            } else {
+            }
+            else {
                 LogWarning("CoH Mod Config UI: Failed to resolve mod selector scrollbar subtree widgets.");
             }
 
@@ -4695,7 +4808,8 @@ namespace ConfigUi::Frontend {
                     state.widgetProxySetVisible(state.modSelectorValueLabel.Get(), true);
                     state.widgetProxySetVisible(state.modSelectorButton.Get(), true);
                 }
-            } else {
+            }
+            else {
                 SetRawWidgetVisible(state, state.modSelectorComboBoxWidget, false);
                 SetRawWidgetVisible(state, state.modSelectorListBoxWidget, false);
                 state.observedModListSelection = -1;
@@ -4715,7 +4829,8 @@ namespace ConfigUi::Frontend {
                 SelectedOptionRef rowOption = {};
                 if (TryGetVisibleRowOption(state, rowIndex, rowOption)) {
                     UpdateRowForOption(state, rowIndex, rowOption);
-                } else {
+                }
+                else {
                     HideAllRowControls(state, rowIndex);
                 }
             }
@@ -4742,6 +4857,14 @@ namespace ConfigUi::Frontend {
                 InstallGameWindowHook(state);
             }
 
+            if (!state.catalogRefreshed) {
+                if ((state.catalog != nullptr) && !state.catalog->Refresh()) {
+                    LogError("CoH Mod Config UI failed to refresh the mod catalog.");
+                    return;
+                }
+                state.catalogRefreshed = true;
+            }
+
             if (!RefreshVisibleMenu(state)) {
                 LogError("CoH Mod Config UI failed to build or refresh the overlay.");
                 return;
@@ -4765,7 +4888,7 @@ namespace ConfigUi::Frontend {
 
             LogInfo("CoH Mod Config UI is deactivating the screen.");
             state.deactivateScreen(screenManager, state.screen);
-            RetireOverlayScreen(state, screenManager, state.screen, true, true);
+            RetireOverlayScreen(state, screenManager, state.screen, true, false);
         }
 
         void ToggleMenuOverlay(State& state, ScreenManagerHandle* screenManager) {
@@ -5109,6 +5232,7 @@ namespace ConfigUi::Frontend {
             }
 
             ScreenManagerHandle* screenManager = GetScreenManager(state);
+            ReleaseRetiredOverlayScreenIfPending(state, screenManager);
             if (IsEdgePressed(state, state.toggleKey, state.toggleKeyWasDown)) {
                 if (!state.toggleInputObserved) {
                     LogInfo("CoH Mod Config UI detected the first F10 toggle input.");
@@ -5246,11 +5370,22 @@ namespace ConfigUi::Frontend {
                 state.originalScreenManagerUpdate(screenManager, deltaTime);
             }
 
+            if (state.shutdownInProgress) {
+                return;
+            }
+
             HandleUiTick(state);
         }
 
         void __fastcall HookedDeactivateAllScreens(ScreenManagerHandle* screenManager, void*) {
             State& state = GetState();
+
+            if (state.shutdownInProgress) {
+                if (state.originalDeactivateAllScreens != nullptr) {
+                    state.originalDeactivateAllScreens(screenManager);
+                }
+                return;
+            }
 
             if ((state.screen != nullptr) && state.overlayVisible) {
                 HideMenuOverlay(state, screenManager);
@@ -5266,6 +5401,13 @@ namespace ConfigUi::Frontend {
 
         void __fastcall HookedUnloadScreen(ScreenManagerHandle* screenManager, void*, void* screen) {
             State& state = GetState();
+
+            if (state.shutdownInProgress) {
+                if (state.originalUnloadScreen != nullptr) {
+                    state.originalUnloadScreen(screenManager, screen);
+                }
+                return;
+            }
 
             if ((screen != nullptr) && (screen == state.screen)) {
                 if (state.overlayUnloadInProgress) {
@@ -5283,7 +5425,7 @@ namespace ConfigUi::Frontend {
                 if (state.originalUnloadScreen != nullptr) {
                     state.originalUnloadScreen(screenManager, screen);
                 }
-                ReleaseDonorScreens(state, screenManager);
+                UnregisterFileOverride(state);
                 FinalizeOverlayAfterEngineUnload(state);
                 return;
             }
@@ -5295,7 +5437,7 @@ namespace ConfigUi::Frontend {
                 if (state.originalUnloadScreen != nullptr) {
                     state.originalUnloadScreen(screenManager, screen);
                 }
-                ReleaseDonorScreens(state, screenManager);
+                UnregisterFileOverride(state);
 
                 // Do not zero proxy/controller storage here. The engine may still walk
                 // bound proxy objects during the later Flush phase even after
@@ -5307,11 +5449,55 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
+            if (screen == state.templateDonorScreen) {
+                state.templateDonorScreen = nullptr;
+            }
+            if (screen == state.optionsMenuDonorScreen) {
+                state.optionsMenuDonorScreen = nullptr;
+            }
             if (state.originalUnloadScreen != nullptr) {
                 state.originalUnloadScreen(screenManager, screen);
             }
         }
 
+    }
+
+    void ApplyTemplateObjectNullifyPatch() {
+        HMODULE gameModule = GetModuleHandleA(kGameExecutableModuleName);
+        if (gameModule == nullptr) {
+            gameModule = GetModuleHandleA(nullptr);
+        }
+        if (gameModule == nullptr) {
+            return;
+        }
+
+        auto* const patchAddr = reinterpret_cast<std::uint8_t*>(
+            reinterpret_cast<std::uintptr_t>(gameModule) + kTemplateObjectNullifyRva
+            );
+
+        const std::uint32_t expectedTargetAddress = static_cast<std::uint32_t>(
+            reinterpret_cast<std::uintptr_t>(gameModule) + kTemplateObjectPointerRva
+        );
+        const std::array<std::uint8_t, 6u> kExpected = {
+            0x89u,
+            0x1Du,
+            static_cast<std::uint8_t>((expectedTargetAddress >> 0) & 0xFFu),
+            static_cast<std::uint8_t>((expectedTargetAddress >> 8) & 0xFFu),
+            static_cast<std::uint8_t>((expectedTargetAddress >> 16) & 0xFFu),
+            static_cast<std::uint8_t>((expectedTargetAddress >> 24) & 0xFFu)
+        };
+        if (!std::equal(kExpected.begin(), kExpected.end(), patchAddr)) {
+            LogError("CoH Mod Config UI: template-object nullify patch site mismatch — crash on exit may occur.");
+            return;
+        }
+
+        DWORD oldProtect = 0;
+        if (!VirtualProtect(patchAddr, kExpected.size(), PAGE_EXECUTE_READWRITE, &oldProtect)) {
+            return;
+        }
+        std::fill(patchAddr, patchAddr + kExpected.size(), std::uint8_t{ 0x90u });
+        VirtualProtect(patchAddr, kExpected.size(), oldProtect, &oldProtect);
+        LogInfo("CoH Mod Config UI patched template-object nullify instruction.");
     }
 
     bool Install(Catalog* catalog) {
@@ -5322,6 +5508,7 @@ namespace ConfigUi::Frontend {
         State& state = GetState();
         if (state.installed) {
             state.catalog = catalog;
+            state.shutdownInProgress = false;
             return true;
         }
 
@@ -5332,6 +5519,10 @@ namespace ConfigUi::Frontend {
         state.optionsMenuDonorScreen = nullptr;
         state.overlayBuilt = false;
         state.overlayVisible = false;
+        state.shutdownInProgress = false;
+        state.filePathHdPatchedJneAddress = nullptr;
+        state.filePathHdOriginalJneBytes = {};
+        state.filePathHdForwardSlashPatchApplied = false;
         state.selectedModIndex = 0u;
         state.selectedOptionIndex = 0u;
         state.topVisibleOptionIndex = 0u;
@@ -5349,6 +5540,8 @@ namespace ConfigUi::Frontend {
             return false;
         }
 
+        ApplyTemplateObjectNullifyPatch();
+
         state.toggleKey = state.getKeyFromName == nullptr ? 0 : state.getKeyFromName(kToggleKeyName);
         if (state.toggleKey == 0) {
             LogError("CoH Mod Config UI failed to resolve the F10 input key.");
@@ -5363,11 +5556,6 @@ namespace ConfigUi::Frontend {
             return false;
         }
 
-        if (!ModSDK::Hooks::EnableHook(state.screenManagerUpdateTarget)) {
-            LogError("CoH Mod Config UI failed to enable the ScreenManager::Update hook.");
-            return false;
-        }
-
         if (!ModSDK::Hooks::CreateHook(
             state.deactivateAllScreensTarget,
             reinterpret_cast<void*>(&HookedDeactivateAllScreens),
@@ -5376,21 +5564,11 @@ namespace ConfigUi::Frontend {
             return false;
         }
 
-        if (!ModSDK::Hooks::EnableHook(state.deactivateAllScreensTarget)) {
-            LogError("CoH Mod Config UI failed to enable the ScreenManager::DeactivateAllScreens hook.");
-            return false;
-        }
-
         if (!ModSDK::Hooks::CreateHook(
             state.unloadScreenTarget,
             reinterpret_cast<void*>(&HookedUnloadScreen),
             reinterpret_cast<void**>(&state.originalUnloadScreen))) {
             LogError("CoH Mod Config UI failed to create the ScreenManager::UnloadScreen hook.");
-            return false;
-        }
-
-        if (!ModSDK::Hooks::EnableHook(state.unloadScreenTarget)) {
-            LogError("CoH Mod Config UI failed to enable the ScreenManager::UnloadScreen hook.");
             return false;
         }
 
@@ -5408,67 +5586,8 @@ namespace ConfigUi::Frontend {
 
     void Shutdown() {
         State& state = GetState();
-        if (!state.installed) {
-            state.catalog = nullptr;
-            return;
-        }
-
-        // Disable the tick hook first to prevent further callbacks.
-        if (state.screenManagerUpdateTarget != nullptr) {
-            ModSDK::Hooks::DisableHook(state.screenManagerUpdateTarget);
-        }
-        if (state.deactivateAllScreensTarget != nullptr) {
-            ModSDK::Hooks::DisableHook(state.deactivateAllScreensTarget);
-        }
-        if (state.unloadScreenTarget != nullptr) {
-            ModSDK::Hooks::DisableHook(state.unloadScreenTarget);
-        }
-
-        // Unload our screens from the ScreenManager so the engine doesn't try to
-        // iterate/destroy our widget tree during its own shutdown. The widgets are
-        // backed by opaque byte arrays in static storage, and the engine walking
-        // into them after we're gone causes access violations.
-        //
-        // We intentionally skip widget proxy dtors — those may call into engine
-        // internals that are partially torn down. Unloading the screens is enough
-        // to detach our widget tree from the engine's ownership.
-        ScreenManagerHandle* screenManager = GetScreenManager(state);
-        if (screenManager != nullptr && state.unloadScreen != nullptr) {
-            if (state.overlayVisible && state.deactivateScreen != nullptr && state.screen != nullptr) {
-                state.deactivateScreen(screenManager, state.screen);
-            }
-
-            if (state.screen != nullptr) {
-                if (state.screenSetHidden != nullptr) {
-                    state.screenSetHidden(state.screen, true);
-                }
-                DetachSharedPresentations(state, state.screen);
-                state.unloadScreen(screenManager, state.screen);
-                FinalizeOverlayAfterEngineUnload(state);
-            }
-
-            if (state.retiredScreen != nullptr) {
-                DetachSharedPresentations(state, state.retiredScreen);
-                state.unloadScreen(screenManager, state.retiredScreen);
-                state.retiredScreen = nullptr;
-            }
-
-            ReleaseDonorScreens(state, screenManager);
-
-            state.fileOverrideRegistered = false;
-        }
-
+        state.shutdownInProgress = true;
+        state.fileOverrideRegistered = false;
         RemoveGameWindowHook(state);
-        state.modSelectorDropDownOpen = false;
-        state.activeEnumDropDownRowIndex = -1;
-
-        state.catalog = nullptr;
-        state.installed = false;
-        state.screen = nullptr;
-        state.retiredScreen = nullptr;
-        state.templateDonorScreen = nullptr;
-        state.optionsMenuDonorScreen = nullptr;
-        state.overlayBuilt = false;
-        state.overlayVisible = false;
     }
 }
