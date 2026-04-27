@@ -467,10 +467,10 @@ namespace ConfigUi::Frontend {
             void* widgetFactoryCreateAddress = nullptr;
             void* nativeSliderBindInputAddress = nullptr;
             bool fileOverrideRegistered = false;
-            bool updateHookObserved = false;
             bool toggleKeyWasDown = false;
-            bool toggleInputObserved = false;
             bool pendingWindowToggle = false;
+            bool loggedOverlayTeardownPending = false;
+            const char* loggedBlockedOverlayScreenName = nullptr;
             void* screen = nullptr;
             void* retiredScreen = nullptr;
             void* templateDonorScreen = nullptr;
@@ -695,6 +695,10 @@ namespace ConfigUi::Frontend {
 
         void LogInfo(const std::string& message) {
             ModSDK::Runtime::LogInfo(message.c_str());
+        }
+
+        void LogDebug(const std::string& message) {
+            ModSDK::Runtime::LogDebug(message.c_str());
         }
 
         void LogWarning(const std::string& message) {
@@ -1003,7 +1007,7 @@ namespace ConfigUi::Frontend {
 
             state.topVisibleOptionIndex = newTopVisibleIndex;
             state.selectedOptionIndex = newTopVisibleIndex;
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Scrolled option window to first visible index " +
                 std::to_string(state.topVisibleOptionIndex) +
                 "."
@@ -1019,7 +1023,7 @@ namespace ConfigUi::Frontend {
 
             SelectedOptionRef selectedOption = {};
             if (!TryGetSelectedOption(state, selectedOption) || (selectedOption.optionCount <= kVisibleRowCount)) {
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Ignored scroll request with delta " +
                     std::to_string(deltaRows) +
                     " because the current mod does not overflow the visible rows."
@@ -1031,7 +1035,7 @@ namespace ConfigUi::Frontend {
             const long currentTopVisibleIndex = static_cast<long>(state.topVisibleOptionIndex);
             const long nextTopVisibleIndex = std::clamp(currentTopVisibleIndex + static_cast<long>(deltaRows), 0l, maxFirstVisibleIndex);
             if (nextTopVisibleIndex == currentTopVisibleIndex) {
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Ignored scroll request with delta " +
                     std::to_string(deltaRows) +
                     " because the option window is already at the boundary (top=" +
@@ -1138,7 +1142,7 @@ namespace ConfigUi::Frontend {
             if (IsPointInsideRect(mouseX, mouseY, modSelectorRectX, modSelectorRectY, modSelectorRectWidth, modSelectorRectHeight)) {
                 state.modSelectorDropDownOpen = true;
                 state.activeEnumDropDownRowIndex = -1;
-                LogInfo("CoH Mod Config UI: Mod selector ComboBox body clicked.");
+                LogDebug("CoH Mod Config UI: Mod selector ComboBox body clicked.");
                 return true;
             }
 
@@ -1154,7 +1158,7 @@ namespace ConfigUi::Frontend {
                 if (IsPointInsideRect(mouseX, mouseY, rowRectX, rowRectY, rowRectWidth, rowRectHeight)) {
                     state.modSelectorDropDownOpen = false;
                     state.activeEnumDropDownRowIndex = static_cast<long>(i);
-                    LogInfo("CoH Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
+                    LogDebug("CoH Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
                     return true;
                 }
             }
@@ -1323,7 +1327,7 @@ namespace ConfigUi::Frontend {
                 std::lround(progress * static_cast<float>(maxFirstVisibleIndex))
                 );
 
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Panel scrollbar click observed at normalized position (" +
                 std::to_string(clickX) +
                 ", " +
@@ -1653,7 +1657,7 @@ namespace ConfigUi::Frontend {
             {
                 std::string narrowDir(dataDir.size(), '\0');
                 for (size_t i = 0; i < dataDir.size(); ++i) narrowDir[i] = static_cast<char>(dataDir[i]);
-                LogInfo("CoH Mod Config UI registering file override at: " + narrowDir);
+                LogDebug("CoH Mod Config UI registering file override at: " + narrowDir);
             }
 
             void* source = filePathHDCreate(dataDir.c_str(), kStreamModeRead);
@@ -1683,7 +1687,7 @@ namespace ConfigUi::Frontend {
                         fileOpenFn[kForwardSlashJneOffset + 1] = 0x90;
                         state.filePathHdForwardSlashPatchApplied = true;
                         VirtualProtect(fileOpenFn + kForwardSlashJneOffset, 2, oldProtect, &oldProtect);
-                        LogInfo("CoH Mod Config UI patched FilePathHD forward-slash rejection.");
+                        LogDebug("CoH Mod Config UI patched FilePathHD forward-slash rejection.");
                     }
                 }
             }
@@ -1695,7 +1699,7 @@ namespace ConfigUi::Frontend {
             }
 
             state.fileOverrideRegistered = true;
-            LogInfo("CoH Mod Config UI registered DATA: file override with priority " + std::to_string(kFileOverridePriority) + ".");
+            LogDebug("CoH Mod Config UI registered DATA: file override with priority " + std::to_string(kFileOverridePriority) + ".");
             return true;
         }
 
@@ -1710,7 +1714,7 @@ namespace ConfigUi::Frontend {
                         state.filePathHdPatchedJneAddress = nullptr;
                         state.filePathHdOriginalJneBytes = {};
                         state.filePathHdForwardSlashPatchApplied = false;
-                        LogInfo("CoH Mod Config UI restored FilePathHD forward-slash rejection.");
+                        LogDebug("CoH Mod Config UI restored FilePathHD forward-slash rejection.");
                     }
                 }
                 return true;
@@ -1744,10 +1748,10 @@ namespace ConfigUi::Frontend {
                     state.filePathHdPatchedJneAddress = nullptr;
                     state.filePathHdOriginalJneBytes = {};
                     state.filePathHdForwardSlashPatchApplied = false;
-                    LogInfo("CoH Mod Config UI restored FilePathHD forward-slash rejection.");
+                    LogDebug("CoH Mod Config UI restored FilePathHD forward-slash rejection.");
                 }
             }
-            LogInfo("CoH Mod Config UI removed the DATA: file override alias.");
+            LogDebug("CoH Mod Config UI removed the DATA: file override alias.");
             return true;
         }
 
@@ -2147,7 +2151,7 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            LogInfo("CoH Mod Config UI: Releasing retired overlay screen on a deferred UI tick.");
+            LogDebug("CoH Mod Config UI: Releasing retired overlay screen on a deferred UI tick.");
             HookedUnloadScreen(screenManager, nullptr, state.retiredScreen);
 
             if ((state.retiredScreen == nullptr) && (state.screen == nullptr)) {
@@ -2493,7 +2497,7 @@ namespace ConfigUi::Frontend {
             }
 
             if (FindWidgetExtensionObject(state, itemWidget, kTextLabelExtensionId) == nullptr) {
-                LogWarning(
+                LogDebug(
                     "CoH Mod Config UI: " + contextLabel +
                     " list item '" +
                     itemName +
@@ -2519,7 +2523,7 @@ namespace ConfigUi::Frontend {
             }
 
             if (textSet) {
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Set direct fallback text on " + contextLabel +
                     " list item '" +
                     itemName +
@@ -2561,7 +2565,7 @@ namespace ConfigUi::Frontend {
 
             const void* const subItemListExtension = FindWidgetExtensionObject(state, itemWidget, kItemSubItemListExtensionId);
             if (subItemListExtension == nullptr) {
-                LogWarning(
+                LogDebug(
                     "CoH Mod Config UI: " + contextLabel +
                     " list item '" + itemName +
                     "' has no extension 17 child list; falling back to subitem index 0."
@@ -2575,7 +2579,7 @@ namespace ConfigUi::Frontend {
                 *reinterpret_cast<void* const* const*>(extensionBase + kExtensionChildArrayOffset);
             const long childCount = *reinterpret_cast<const long*>(extensionBase + kExtensionChildCountOffset);
 
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: " + contextLabel +
                 " list item '" + itemName +
                 "' exposes " + std::to_string(childCount) +
@@ -2583,7 +2587,7 @@ namespace ConfigUi::Frontend {
             );
 
             if ((childWidgets == nullptr) || (childCount <= 0) || (childCount > kMaxExpectedSubItemCount)) {
-                LogWarning(
+                LogDebug(
                     "CoH Mod Config UI: " + contextLabel +
                     " list item '" + itemName +
                     "' reported an invalid subitem list; falling back to subitem index 0."
@@ -2595,7 +2599,7 @@ namespace ConfigUi::Frontend {
                 void* const childWidget = const_cast<void*>(childWidgets[childIndex]);
                 const bool childHasTextExtension =
                     FindWidgetExtensionObject(state, childWidget, kTextLabelExtensionId) != nullptr;
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: " + contextLabel +
                     " list item '" + itemName +
                     "' subitem[" + std::to_string(childIndex) +
@@ -2609,7 +2613,7 @@ namespace ConfigUi::Frontend {
                 }
             }
 
-            LogWarning(
+            LogDebug(
                 "CoH Mod Config UI: " + contextLabel +
                 " list item '" + itemName +
                 "' exposed no text-capable subitem; falling back to subitem index 0."
@@ -2636,7 +2640,7 @@ namespace ConfigUi::Frontend {
             OpaqueCustomListBox listBoxProxy = {};
             state.customListBoxCtor(listBoxProxy.Get());
             state.widgetProxyBind(listBoxProxy.Get(), listBoxWidget);
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Bound CustomListBox proxy for row " +
                 std::to_string(rowIndex) +
                 " to raw widget '" +
@@ -2653,7 +2657,7 @@ namespace ConfigUi::Frontend {
             {
                 char addrBuf[32] = {};
                 std::snprintf(addrBuf, sizeof(addrBuf), "0x%08X", reinterpret_cast<std::uintptr_t>(oldItemProxy));
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: CustomListBox old-item proxy for row " +
                     std::to_string(rowIndex) +
                     " is at " +
@@ -2663,7 +2667,7 @@ namespace ConfigUi::Frontend {
             }
 
             state.customListBoxDeleteAllItems(listBoxProxy.Get());
-            LogInfo("CoH Mod Config UI: Cleared existing CustomListBox items for row " + std::to_string(rowIndex) + ".");
+            LogDebug("CoH Mod Config UI: Cleared existing CustomListBox items for row " + std::to_string(rowIndex) + ".");
             if (optionEntry.choices.empty()) {
                 LogWarning("CoH Mod Config UI: Enum row " + std::to_string(rowIndex) + " has no registered choices to populate.");
                 state.customListBoxDtor(listBoxProxy.Get());
@@ -2689,7 +2693,7 @@ namespace ConfigUi::Frontend {
                 void* const itemWidget = FindNamedWidget(state, listBoxWidget, itemName.c_str());
                 if (!listItemTextSubItemIndexResolved) {
                     if (itemWidget == nullptr) {
-                        LogWarning(
+                        LogDebug(
                             "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
                             " could not resolve list item widget '" + itemName +
                             "' after AddItem; falling back to subitem index 0."
@@ -2705,7 +2709,7 @@ namespace ConfigUi::Frontend {
                         );
                     }
                 }
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
                     " CustomListBox::AddItem added '" + itemName +
                     "' with result " + std::to_string(addResult) +
@@ -2732,7 +2736,7 @@ namespace ConfigUi::Frontend {
                         displayText
                     );
                     if (!usedFallbackLabel) {
-                        LogWarning(
+                        LogDebug(
                             "CoH Mod Config UI: Fallback dropdown item label path failed for list item '" +
                             itemName +
                             "'."
@@ -2740,14 +2744,14 @@ namespace ConfigUi::Frontend {
                     }
                 }
                 else if (addResult >= 0) {
-                    LogWarning(
+                    LogDebug(
                         "CoH Mod Config UI: Row " + std::to_string(rowIndex) +
                         " could not resolve list item widget '" + itemName +
                         "' for fallback dropdown label creation."
                     );
                 }
                 if (usedNativeItemTextPath) {
-                    LogInfo(
+                    LogDebug(
                         "CoH Mod Config UI: Used native CustomListBoxItemOld text path for list item '" +
                         itemName +
                         "'."
@@ -2773,7 +2777,7 @@ namespace ConfigUi::Frontend {
             }
             state.customListBoxDtor(listBoxProxy.Get());
 
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Populated enum list box for row " +
                 std::to_string(rowIndex) +
                 " with " +
@@ -2807,7 +2811,7 @@ namespace ConfigUi::Frontend {
             OpaqueCustomListBox listBoxProxy = {};
             state.customListBoxCtor(listBoxProxy.Get());
             state.widgetProxyBind(listBoxProxy.Get(), state.modSelectorListBoxWidget);
-            LogInfo("CoH Mod Config UI: Bound CustomListBox proxy for mod selector.");
+            LogDebug("CoH Mod Config UI: Bound CustomListBox proxy for mod selector.");
 
             void* const oldItemProxy = state.customListBoxGetOldCustomItem(listBoxProxy.Get());
             if (oldItemProxy == nullptr) {
@@ -2817,7 +2821,7 @@ namespace ConfigUi::Frontend {
             }
 
             state.customListBoxDeleteAllItems(listBoxProxy.Get());
-            LogInfo("CoH Mod Config UI: Cleared existing mod selector CustomListBox items.");
+            LogDebug("CoH Mod Config UI: Cleared existing mod selector CustomListBox items.");
 
             const std::vector<ModEntry>& mods = state.catalog->GetMods();
             if (!mods.empty() && (state.selectedModIndex >= mods.size())) {
@@ -2843,7 +2847,7 @@ namespace ConfigUi::Frontend {
                     );
                 }
 
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Mod selector CustomListBox::AddItem added '" + itemName +
                     "' with result " + std::to_string(addResult) +
                     ", text subitem index " + std::to_string(listItemTextSubItemIndex) +
@@ -2885,7 +2889,7 @@ namespace ConfigUi::Frontend {
             }
             state.customListBoxDtor(listBoxProxy.Get());
 
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Populated mod selector list box with " +
                 std::to_string(mods.size()) +
                 " mods; selected mod index=" +
@@ -2985,7 +2989,7 @@ namespace ConfigUi::Frontend {
             );
 
             SetRawWidgetVisible(state, listScrollBarWidget, needsScrollBar);
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Configured mod selector list box height for " +
                 std::to_string(modCount) +
                 " mods to " +
@@ -3080,7 +3084,7 @@ namespace ConfigUi::Frontend {
                 );
             }
 
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Configured row " +
                 std::to_string(rowIndex) +
                 " list box height for " +
@@ -3343,7 +3347,7 @@ namespace ConfigUi::Frontend {
             state.rowNativeSliderInitialized[rowIndex] = true;
             state.rowObservedSliderProgress[rowIndex] = 0.0f;
             state.rowHasObservedSliderProgress[rowIndex] = false;
-            LogInfo("CoH Mod Config UI: Initialized native slider controller for row " + std::to_string(rowIndex) + ".");
+            LogDebug("CoH Mod Config UI: Initialized native slider controller for row " + std::to_string(rowIndex) + ".");
             return true;
         }
 
@@ -3439,7 +3443,7 @@ namespace ConfigUi::Frontend {
                 screenSlot = nullptr;
             }
 
-            LogInfo("CoH Mod Config UI is loading donor screen: " + std::string(screenName));
+            LogDebug("CoH Mod Config UI is loading donor screen: " + std::string(screenName));
             screenSlot = state.loadScreenByName(screenManager, screenName);
             if (screenSlot == nullptr) {
                 LogError("CoH Mod Config UI failed to load donor screen: " + std::string(screenName));
@@ -3647,7 +3651,7 @@ namespace ConfigUi::Frontend {
                 }
 
                 state.widgetSetPresentation(targetRawWidget, nullptr);
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: donor widget '" +
                     std::string(donorWidgetName) +
                     "' has null Presentation; cleared target Presentation to match donor."
@@ -3655,7 +3659,7 @@ namespace ConfigUi::Frontend {
             }
             else {
                 state.widgetSetPresentation(targetRawWidget, presentation);
-                LogInfo("CoH Mod Config UI: transferred Presentation from '" + std::string(donorWidgetName) +
+                LogDebug("CoH Mod Config UI: transferred Presentation from '" + std::string(donorWidgetName) +
                     "' (addr=" + std::to_string(reinterpret_cast<std::uintptr_t>(presentation)) + ").");
             }
 
@@ -3935,74 +3939,30 @@ namespace ConfigUi::Frontend {
             }
 
             // Step 2: Load our custom screen.
-            LogInfo("CoH Mod Config UI: calling LoadScreen('" + std::string(kScreenName) + "')...");
+            LogDebug("CoH Mod Config UI: calling LoadScreen('" + std::string(kScreenName) + "')...");
             state.screen = state.loadScreenByName(screenManager, kScreenName);
             if (state.screen == nullptr) {
                 LogError("CoH Mod Config UI: LoadScreen returned null.");
                 return false;
             }
 
-            LogInfo("CoH Mod Config UI: LoadScreen returned non-null. Calling SetHidden...");
+            LogDebug("CoH Mod Config UI: LoadScreen returned non-null. Calling SetHidden...");
             if (state.screenSetHidden != nullptr) {
                 state.screenSetHidden(state.screen, true);
             }
 
-            // Step 3: Get root widget.
             state.rootWidgetRaw = GetScreenRootWidget(state, state.screen);
-            {
-                char addrBuf[32] = {};
-                std::snprintf(addrBuf, sizeof(addrBuf), "0x%08X", reinterpret_cast<std::uintptr_t>(state.rootWidgetRaw));
-                LogInfo(std::string("CoH Mod Config UI: GetRootWidget returned ") + addrBuf);
+            if (state.rootWidgetRaw == nullptr) {
+                LogError("CoH Mod Config UI: GetRootWidget returned null.");
+                return false;
             }
 
-            // Step 4: Dump the widget name at rootWidget+4 to see what the engine stored.
-            if (state.rootWidgetRaw != nullptr) {
-                const char* nameAt4 = reinterpret_cast<const char*>(reinterpret_cast<std::uintptr_t>(state.rootWidgetRaw) + 4);
-                // Safely read up to 64 chars.
-                char nameBuf[65] = {};
-                for (int i = 0; i < 64; ++i) {
-                    char c = nameAt4[i];
-                    if (c == '\0') break;
-                    if (c < 0x20 || c > 0x7E) { nameBuf[i] = '?'; }
-                    else { nameBuf[i] = c; }
-                }
-                LogInfo(std::string("CoH Mod Config UI: rootWidget+4 name string = '") + nameBuf + "'");
-
-                // Also dump first 64 bytes as hex for inspection.
-                const unsigned char* raw = reinterpret_cast<const unsigned char*>(state.rootWidgetRaw);
-                std::string hexDump;
-                for (int i = 0; i < 64; ++i) {
-                    char hex[4] = {};
-                    std::snprintf(hex, sizeof(hex), "%02X ", raw[i]);
-                    hexDump += hex;
-                }
-                LogInfo("CoH Mod Config UI: rootWidget first 64 bytes: " + hexDump);
-            }
-
-            // Step 5: Try findWidgetByName with flags=0 and flags=1.
-            LogInfo("CoH Mod Config UI: Calling findWidgetByName('cohmodconfigui_root', flags=0)...");
-            void* rootGroup0 = state.findWidgetByName(state.rootWidgetRaw, "cohmodconfigui_root", 0);
-            {
-                char addrBuf[32] = {};
-                std::snprintf(addrBuf, sizeof(addrBuf), "0x%08X", reinterpret_cast<std::uintptr_t>(rootGroup0));
-                LogInfo(std::string("CoH Mod Config UI: flags=0 returned ") + addrBuf);
-            }
-
-            LogInfo("CoH Mod Config UI: Calling findWidgetByName('cohmodconfigui_root', flags=1)...");
-            void* rootGroup1 = state.findWidgetByName(state.rootWidgetRaw, "cohmodconfigui_root", 1);
-            {
-                char addrBuf[32] = {};
-                std::snprintf(addrBuf, sizeof(addrBuf), "0x%08X", reinterpret_cast<std::uintptr_t>(rootGroup1));
-                LogInfo(std::string("CoH Mod Config UI: flags=1 returned ") + addrBuf);
-            }
-
-            // Step 6: Create panel Group and attach to root.
             state.panelWidgetRaw = CreateRawWidgetByType(state, kGroupWidgetTypeName);
             if (state.panelWidgetRaw == nullptr) {
                 LogError("CoH Mod Config UI: Failed to create panel Group widget.");
                 return false;
             }
-            LogInfo("CoH Mod Config UI: Created panel Group widget.");
+            LogDebug("CoH Mod Config UI: Created panel Group widget.");
 
             // Transfer Presentation from donor screen so the panel has a visible background.
             if (!EnsureDonorScreenLoaded(state, state.templateDonorScreen, kTemplateScreenName)) {
@@ -4028,9 +3988,8 @@ namespace ConfigUi::Frontend {
                 LogError("CoH Mod Config UI: Failed to attach panel to root render tree.");
                 return false;
             }
-            LogInfo("CoH Mod Config UI: Panel attached to root render tree.");
+            LogDebug("CoH Mod Config UI: Panel attached to root render tree.");
 
-            // Step 7: Create title TextLabel with donor Presentation, attach to panel.
             state.titleLabelRaw = CreateRawWidgetByType(state, kTextLabelWidgetTypeName);
             if (state.titleLabelRaw == nullptr) {
                 LogError("CoH Mod Config UI: Failed to create title TextLabel widget.");
@@ -4053,9 +4012,8 @@ namespace ConfigUi::Frontend {
                 LogError("CoH Mod Config UI: Failed to attach title label to panel render tree.");
                 return false;
             }
-            LogInfo("CoH Mod Config UI: Title label created and attached.");
+            LogDebug("CoH Mod Config UI: Title label created and attached.");
 
-            // Step 8: Create row name TextLabels and attach them to the panel.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 state.rowLabelWidgets[i] = CreateRawWidgetByType(state, kTextLabelWidgetTypeName);
                 if (state.rowLabelWidgets[i] == nullptr) {
@@ -4082,9 +4040,8 @@ namespace ConfigUi::Frontend {
                     return false;
                 }
             }
-            LogInfo("CoH Mod Config UI: Row label widgets created and attached.");
+            LogDebug("CoH Mod Config UI: Row label widgets created and attached.");
 
-            // Step 9: Resolve native CheckButton widgets preloaded by cohmodconfigui.screen.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 const std::string rowCheckButtonName = MakeRowCheckButtonName(i);
                 state.rowCheckButtonWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowCheckButtonName.c_str(), 0);
@@ -4113,11 +4070,10 @@ namespace ConfigUi::Frontend {
                     return false;
                 }
                 SetRawWidgetVisible(state, state.rowCheckButtonWidgets[i], false);
-                LogInfo("CoH Mod Config UI: Resolved, reattached, and positioned preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
+                LogDebug("CoH Mod Config UI: Resolved, reattached, and positioned preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
             }
-            LogInfo("CoH Mod Config UI: Row bool CheckButton widgets resolved from the active screen.");
+            LogDebug("CoH Mod Config UI: Row bool CheckButton widgets resolved from the active screen.");
 
-            // Step 10: Resolve native slider widgets preloaded by cohmodconfigui.screen for int/float rows.
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 const std::string rowSliderName = MakeRowSliderName(i);
                 const std::string rowSliderButtonName = MakeRowSliderButtonName(i);
@@ -4185,7 +4141,7 @@ namespace ConfigUi::Frontend {
                     LogError("CoH Mod Config UI: Failed to initialize native slider controller for row " + std::to_string(i) + ".");
                     return false;
                 }
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Resolved, reattached, and positioned preloaded slider widget '" +
                     rowSliderName +
                     "' for row " +
@@ -4193,7 +4149,7 @@ namespace ConfigUi::Frontend {
                     "."
                 );
             }
-            LogInfo("CoH Mod Config UI: Row numeric slider widgets resolved from the active screen.");
+            LogDebug("CoH Mod Config UI: Row numeric slider widgets resolved from the active screen.");
 
             if (!EnsureDonorScreenLoaded(state, state.optionsMenuDonorScreen, kOptionsmenuDonorScreenName)) {
                 LogError("CoH Mod Config UI: Failed to load donor screen '" + std::string(kOptionsmenuDonorScreenName) + "' for enum row widgets.");
@@ -4235,7 +4191,7 @@ namespace ConfigUi::Frontend {
                 LogError("CoH Mod Config UI: Failed to resolve the panel ScrollBar subtree widgets.");
                 return false;
             }
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Panel ScrollBar child widgets resolved as dec='" +
                 ReadWidgetNameForLog(state.panelScrollBarDecButtonWidget) +
                 "', inc='" +
@@ -4315,7 +4271,7 @@ namespace ConfigUi::Frontend {
                 if (boundThumbArtLabel && (state.artLabelDtor != nullptr)) {
                     state.artLabelDtor(panelScrollThumbArtLabel.Get());
                 }
-                LogInfo("CoH Mod Config UI: Resolved panel scrollbar visuals from the active screen.");
+                LogDebug("CoH Mod Config UI: Resolved panel scrollbar visuals from the active screen.");
             }
             else {
                 LogWarning("CoH Mod Config UI: Failed to resolve panel scrollbar visuals from the active screen.");
@@ -4368,7 +4324,7 @@ namespace ConfigUi::Frontend {
                 const std::string actualLabelName = ReadWidgetNameForLog(state.rowValueLabelWidgets[i]);
                 const std::string actualButtonName = ReadWidgetNameForLog(state.rowArrowButtonWidgets[i]);
                 const std::string actualListBoxName = ReadWidgetNameForLog(rowListBoxWidget);
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Row " + std::to_string(i) +
                     " ComboBox child widgets resolved as label='" + actualLabelName +
                     "', button='" + actualButtonName +
@@ -4420,7 +4376,7 @@ namespace ConfigUi::Frontend {
                     kRowListBoxSizeY,
                     state.rowComboBoxWidgets[i]
                 );
-                LogInfo("CoH Mod Config UI: Row " + std::to_string(i) + " ComboBox label/button geometry configured.");
+                LogDebug("CoH Mod Config UI: Row " + std::to_string(i) + " ComboBox label/button geometry configured.");
 
                 if (!TransferDonorPresentationDirect(state, state.rowValueLabelWidgets[i], state.optionsMenuDonorScreen, kDropdownLabelDonorWidgetName)) {
                     LogWarning("CoH Mod Config UI: Failed to transfer ComboBox label Presentation from donor for row " + std::to_string(i) + ".");
@@ -4446,7 +4402,7 @@ namespace ConfigUi::Frontend {
                     const std::string expectedItemsName = MakeRowComboBoxListBoxItemsName(i);
                     const std::string expectedScrollBarName = MakeRowComboBoxListBoxScrollBarName(i);
                     const std::string expectedItemTemplateName = MakeRowComboBoxListBoxItemTemplateName(i);
-                    LogInfo(
+                    LogDebug(
                         "CoH Mod Config UI: Row " + std::to_string(i) +
                         " list box child widgets resolved as items='" + ReadWidgetNameForLog(rowListItemsWidget) +
                         "', scrollBar='" + ReadWidgetNameForLog(rowListScrollBarWidget) +
@@ -4505,7 +4461,7 @@ namespace ConfigUi::Frontend {
                         rowScrollBarPageDownButtonWidget,
                         rowScrollBarPageUpButtonWidget
                     )) {
-                        LogInfo(
+                        LogDebug(
                             "CoH Mod Config UI: Row " + std::to_string(i) +
                             " scrollbar child widgets resolved as dec='" + ReadWidgetNameForLog(rowScrollBarDecButtonWidget) +
                             "', inc='" + ReadWidgetNameForLog(rowScrollBarIncButtonWidget) +
@@ -4541,7 +4497,7 @@ namespace ConfigUi::Frontend {
                     LogWarning("CoH Mod Config UI: Failed to resolve list box subtree widgets for row " + std::to_string(i) + ".");
                 }
             }
-            LogInfo("CoH Mod Config UI: Native row ComboBox widgets created, attached, and child widgets resolved.");
+            LogDebug("CoH Mod Config UI: Native row ComboBox widgets created, attached, and child widgets resolved.");
 
             // Step 13: Create a native ComboBox widget for the header-level mod selector.
             state.modSelectorComboBoxWidget = CreateRawWidgetByType(state, kComboBoxWidgetTypeName);
@@ -4585,7 +4541,7 @@ namespace ConfigUi::Frontend {
             const std::string expectedModSelectorLabelName = MakeModSelectorLabelName();
             const std::string expectedModSelectorButtonName = MakeModSelectorButtonName();
             const std::string expectedModSelectorListBoxName = MakeModSelectorListBoxName();
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Mod selector ComboBox child widgets resolved as label='" +
                 ReadWidgetNameForLog(state.modSelectorValueLabelWidget) +
                 "', button='" +
@@ -4669,7 +4625,7 @@ namespace ConfigUi::Frontend {
                 modSelectorScrollBarPageDownButtonWidget,
                 modSelectorScrollBarPageUpButtonWidget
             )) {
-                LogInfo(
+                LogDebug(
                     "CoH Mod Config UI: Mod selector scrollbar child widgets resolved as dec='" +
                     ReadWidgetNameForLog(modSelectorScrollBarDecButtonWidget) +
                     "', inc='" +
@@ -4703,7 +4659,7 @@ namespace ConfigUi::Frontend {
                 LogWarning("CoH Mod Config UI: Failed to resolve mod selector scrollbar subtree widgets.");
             }
 
-            LogInfo("CoH Mod Config UI: Native mod selector ComboBox created, attached, and child widgets resolved.");
+            LogDebug("CoH Mod Config UI: Native mod selector ComboBox created, attached, and child widgets resolved.");
 
             // Step 14: Construct and bind title, row label, bool, numeric, and enum proxies.
             state.textLabelCtor(state.titleLabel.Get());
@@ -4764,10 +4720,10 @@ namespace ConfigUi::Frontend {
                 }
                 ApplyWidgetProxyState(state, state.rowSliders[i].Get());
             }
-            LogInfo("CoH Mod Config UI: All proxy objects constructed.");
+            LogDebug("CoH Mod Config UI: All proxy objects constructed.");
 
             state.overlayBuilt = true;
-            LogInfo("CoH Mod Config UI: Overlay built successfully (panel + title + mod selector + row labels + row CheckButtons + row Sliders + native enum ComboBox child binding milestone).");
+            LogInfo("CoH Mod Config UI: Overlay built successfully.");
             return true;
         }
 
@@ -4944,18 +4900,27 @@ namespace ConfigUi::Frontend {
             }
 
             if (state.overlayUnloadInProgress || (state.retiredScreen != nullptr)) {
-                LogInfo("CoH Mod Config UI: overlay teardown is still pending; refusing to reopen the menu yet.");
+                if (!state.loggedOverlayTeardownPending) {
+                    LogDebug("CoH Mod Config UI: overlay teardown is still pending; refusing to reopen the menu yet.");
+                    state.loggedOverlayTeardownPending = true;
+                }
+                state.loggedBlockedOverlayScreenName = nullptr;
                 return;
             }
+            state.loggedOverlayTeardownPending = false;
 
             if (const char* blockedScreenName = GetBlockedOverlayScreenName(state, screenManager)) {
-                LogInfo(
-                    "CoH Mod Config UI: screen '" +
-                    std::string(blockedScreenName) +
-                    "' is active; refusing to open the menu in this UI context."
-                );
+                if (state.loggedBlockedOverlayScreenName != blockedScreenName) {
+                    LogInfo(
+                        "CoH Mod Config UI: screen '" +
+                        std::string(blockedScreenName) +
+                        "' is active; refusing to open the menu in this UI context."
+                    );
+                    state.loggedBlockedOverlayScreenName = blockedScreenName;
+                }
                 return;
             }
+            state.loggedBlockedOverlayScreenName = nullptr;
 
             if (state.originalGameWindowProc == nullptr) {
                 InstallGameWindowHook(state);
@@ -4978,7 +4943,7 @@ namespace ConfigUi::Frontend {
             state.setTopMost(screenManager, true);
             state.activateScreen(screenManager, state.screen, kDefaultScreenActivationType, false);
             state.overlayVisible = true;
-            LogInfo("CoH Mod Config UI activated screen via pointer-based activation.");
+            LogDebug("CoH Mod Config UI activated screen via pointer-based activation.");
         }
 
         void HideMenuOverlay(State& state, ScreenManagerHandle* screenManager) {
@@ -5123,7 +5088,7 @@ namespace ConfigUi::Frontend {
             state.modSelectorDropDownOpen = false;
             state.activeEnumDropDownRowIndex = -1;
             optionEntry.currentValue = newValue;
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Native ComboBox selection changed for row " +
                 std::to_string(rowIndex) +
                 " to choice " +
@@ -5165,7 +5130,7 @@ namespace ConfigUi::Frontend {
             state.activeEnumDropDownRowIndex = -1;
             state.observedModListSelection = nativeSelectedIndex;
             state.hasObservedModListSelection = true;
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Mod selector changed to mod " +
                 std::to_string(newSelectedModIndex) +
                 " ('" +
@@ -5257,7 +5222,7 @@ namespace ConfigUi::Frontend {
             }
 
             optionEntry.currentValue = newValue;
-            LogInfo(
+            LogDebug(
                 "CoH Mod Config UI: Native slider value changed for row " +
                 std::to_string(rowIndex) +
                 " to normalized progress " +
@@ -5288,7 +5253,7 @@ namespace ConfigUi::Frontend {
             if (clickedOption.optionEntry->type == CoHModSDKConfigType_Enum) {
                 state.modSelectorDropDownOpen = false;
                 state.activeEnumDropDownRowIndex = static_cast<long>(rowIndex);
-                LogInfo("CoH Mod Config UI: Native ComboBox button clicked for row " + std::to_string(rowIndex) + ".");
+                LogDebug("CoH Mod Config UI: Native ComboBox button clicked for row " + std::to_string(rowIndex) + ".");
                 return;
             }
 
@@ -5330,11 +5295,6 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            if (!state.updateHookObserved) {
-                LogInfo("CoH Mod Config UI observed the first ScreenManager::Update tick.");
-                state.updateHookObserved = true;
-            }
-
             ScreenManagerHandle* screenManager = GetScreenManager(state);
             ReleaseRetiredOverlayScreenIfPending(state, screenManager);
             if ((state.originalGameWindowProc == nullptr) && !state.shutdownInProgress) {
@@ -5348,11 +5308,6 @@ namespace ConfigUi::Frontend {
             }
 
             if (toggleRequestedFromWindow || IsEdgePressed(state, state.toggleKey, state.toggleKeyWasDown)) {
-                if (!state.toggleInputObserved) {
-                    LogInfo("CoH Mod Config UI detected the first F10 toggle input.");
-                    state.toggleInputObserved = true;
-                }
-
                 if (screenManager == nullptr) {
                     LogWarning("CoH Mod Config UI received toggle input, but the ScreenManager is unavailable.");
                     return;
@@ -5368,7 +5323,7 @@ namespace ConfigUi::Frontend {
 
             if (state.pendingMouseWheelDelta >= WHEEL_DELTA) {
                 state.pendingMouseWheelDelta -= WHEEL_DELTA;
-                LogInfo("CoH Mod Config UI: Mouse wheel up input observed.");
+                LogDebug("CoH Mod Config UI: Mouse wheel up input observed.");
                 if (state.modSelectorDropDownOpen || (state.activeEnumDropDownRowIndex >= 0)) {
                     TryScrollOpenDropDown(state, -1);
                     return;
@@ -5379,7 +5334,7 @@ namespace ConfigUi::Frontend {
             }
             else if (state.pendingMouseWheelDelta <= -WHEEL_DELTA) {
                 state.pendingMouseWheelDelta += WHEEL_DELTA;
-                LogInfo("CoH Mod Config UI: Mouse wheel down input observed.");
+                LogDebug("CoH Mod Config UI: Mouse wheel down input observed.");
                 if (state.modSelectorDropDownOpen || (state.activeEnumDropDownRowIndex >= 0)) {
                     TryScrollOpenDropDown(state, 1);
                     return;
@@ -5395,13 +5350,13 @@ namespace ConfigUi::Frontend {
                 return;
             }
             if (PollRawWidgetActiveEdge(state, state.panelScrollBarPageUpButtonWidget, state.panelScrollBarPageUpWasActive)) {
-                LogInfo("CoH Mod Config UI: Panel scrollbar page-up click observed.");
+                LogDebug("CoH Mod Config UI: Panel scrollbar page-up click observed.");
                 if (TryScrollOptionWindow(state, -(static_cast<int>(kVisibleRowCount) - 1))) {
                     return;
                 }
             }
             if (PollRawWidgetActiveEdge(state, state.panelScrollBarPageDownButtonWidget, state.panelScrollBarPageDownWasActive)) {
-                LogInfo("CoH Mod Config UI: Panel scrollbar page-down click observed.");
+                LogDebug("CoH Mod Config UI: Panel scrollbar page-down click observed.");
                 if (TryScrollOptionWindow(state, static_cast<int>(kVisibleRowCount) - 1)) {
                     return;
                 }
@@ -5412,7 +5367,7 @@ namespace ConfigUi::Frontend {
                 PollWidgetActiveEdge(state, state.modSelectorButton.Get(), state.modSelectorArrowButtonWasActive)) {
                 state.modSelectorDropDownOpen = true;
                 state.activeEnumDropDownRowIndex = -1;
-                LogInfo("CoH Mod Config UI: Mod selector ComboBox button clicked.");
+                LogDebug("CoH Mod Config UI: Mod selector ComboBox button clicked.");
             }
             if (state.modSelectorListBoxWidget != nullptr) {
                 long selectedIndex = -1;
@@ -5437,7 +5392,7 @@ namespace ConfigUi::Frontend {
                         PollWidgetActiveEdge(state, state.rowValueLabels[i].Get(), state.rowValueLabelWasActive[i]))) {
                     state.modSelectorDropDownOpen = false;
                     state.activeEnumDropDownRowIndex = static_cast<long>(i);
-                    LogInfo("CoH Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
+                    LogDebug("CoH Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
                 }
                 if (PollWidgetActiveEdge(state, state.rowArrowButtons[i].Get(), state.rowArrowButtonWasActive[i])) {
                     OnRowControlClicked(state, i);
@@ -5528,7 +5483,7 @@ namespace ConfigUi::Frontend {
                     return;
                 }
 
-                LogInfo("CoH Mod Config UI: Preparing the custom overlay screen for native unload.");
+                LogDebug("CoH Mod Config UI: Preparing the custom overlay screen for native unload.");
                 state.overlayUnloadInProgress = true;
                 state.overlayVisible = false;
                 RemoveGameWindowHook(state);
@@ -5643,10 +5598,10 @@ namespace ConfigUi::Frontend {
         state.topVisibleOptionIndex = 0u;
         state.modSelectorDropDownOpen = false;
         state.activeEnumDropDownRowIndex = -1;
-        state.updateHookObserved = false;
         state.toggleKeyWasDown = false;
         state.pendingMouseWheelDelta = 0;
-        state.toggleInputObserved = false;
+        state.loggedOverlayTeardownPending = false;
+        state.loggedBlockedOverlayScreenName = nullptr;
         state.fileOverrideRegistered = false;
         ResetOverlayHandles(state);
 
@@ -5693,7 +5648,7 @@ namespace ConfigUi::Frontend {
 
         const std::string detailedSummary = BuildDetailedLogSummary(*catalog);
         if (!detailedSummary.empty()) {
-            LogInfo("CoH Mod Config UI catalog snapshot: " + detailedSummary);
+            LogDebug("CoH Mod Config UI catalog snapshot: " + detailedSummary);
         }
 
         return true;
