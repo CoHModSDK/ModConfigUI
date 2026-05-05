@@ -1,6 +1,7 @@
 #include "UiInterop.hpp"
 
 #include "CoHModSDK.hpp"
+#include "CoHModSDKUI.hpp"
 
 #include <Windows.h>
 
@@ -16,7 +17,6 @@ namespace ConfigUi::Frontend {
     namespace {
         constexpr char kUserInterfaceModuleName[] = "UserInterface.dll";
         constexpr char kPlatformModuleName[] = "Platform.dll";
-        constexpr char kLocalizerModuleName[] = "Localizer.dll";
         constexpr char kFilesystemModuleName[] = "Filesystem.dll";
         constexpr char kGameExecutableModuleName[] = "RelicCOH.exe";
 
@@ -39,10 +39,6 @@ namespace ConfigUi::Frontend {
         using FilePathRemoveAliasFn = bool(__stdcall*)(const char* alias, const char* subPath);
         constexpr char kToggleKeyName[] = "F10";
         constexpr std::uintptr_t kCreateBlankScreenRva = 0x00036360u;
-        constexpr std::size_t kOpaqueGenericWidgetStorageSize = 16384u;
-        constexpr std::size_t kOpaqueButtonStorageSize = 16384u;
-        constexpr std::size_t kOpaqueTextLabelStorageSize = 8192u;
-        constexpr std::size_t kOpaqueLocStringStorageSize = 256u;
         constexpr std::size_t kOpaqueCustomListBoxStorageSize = 16384u;
         constexpr std::size_t kOpaqueCustomListBoxItemOldStorageSize = 16384u;
         constexpr std::size_t kOpaqueNativeSliderStorageSize = 1024u;
@@ -90,10 +86,6 @@ namespace ConfigUi::Frontend {
         constexpr char kDropdownListBoxScrollBarPageDownDonorWidgetName[] = "btnPgDn_scrlBar_lstBox_drop_enviromental_reverb";
         constexpr char kDropdownListBoxScrollBarPageUpDonorWidgetName[] = "btnPgUp_scrlBar_lstBox_drop_enviromental_reverb";
         constexpr char kDropdownListBoxItemTemplateDonorWidgetName[] = "itemTmplt_lstBox_drop_enviromental_reverb";
-        constexpr std::uintptr_t kWidgetFactoryCreateRva = 0x000421A0u;
-        constexpr std::uintptr_t kFindWidgetExtensionRva = 0x00031810u;
-        constexpr std::uintptr_t kAddRenderChildRva = 0x0003DBF0u;
-        constexpr std::uintptr_t kFindWidgetByNameRva = 0x0003BAB0u;
         constexpr int kRenderExtensionId = 6;
         constexpr int kDrawChildrenExtensionId = 1;
         constexpr int kDefaultScreenActivationType = 0;
@@ -194,7 +186,6 @@ namespace ConfigUi::Frontend {
         constexpr std::uintptr_t kFindStyleSetRva = 0x00047950u;
         constexpr std::uintptr_t kFindStyleInSetRva = 0x0003caf0u;
 
-        using GetScreenManagerFn = ScreenManagerHandle * (__stdcall*)();
         using GetStyleManagerFn = StyleManagerHandle * (__thiscall*)(ScreenManagerHandle* manager);
         using ScreenManagerUpdateFn = void(__thiscall*)(ScreenManagerHandle* manager, float deltaTime);
         using ActivateScreenFn = void(__thiscall*)(ScreenManagerHandle* manager, void* screen, int activationType, bool skipTransition);
@@ -206,43 +197,18 @@ namespace ConfigUi::Frontend {
         using ScreenSetNameFn = void(__thiscall*)(void* screen, const char* name);
         using ScreenSetHiddenFn = void(__thiscall*)(void* screen, bool hidden);
         using ScreenSetNativeAspectFn = void(__thiscall*)(void* screen, float nativeAspect);
-        using ScreenGetRootWidgetFn = void* (__thiscall*)(void* screen);
         using LoadScreenByNameFn = void* (__thiscall*)(ScreenManagerHandle* manager, const char* screenName);
         using UnloadScreenFn = void(__thiscall*)(ScreenManagerHandle* manager, void* screen);
         using GetKeyFromNameFn = int(__stdcall*)(const char* keyName);
         using CheckInputQueueForKeyPressFn = bool(__stdcall*)(int key);
         using IsKeyPressedFn = bool(__stdcall*)(int key);
 
-        using WidgetSetNameFn = void(__thiscall*)(void* widget, const char* name);
-        using WidgetSetPositionFn = void(__thiscall*)(void* widget, float x, float y);
-        using WidgetSetSizeFn = void(__thiscall*)(void* widget, float width, float height);
-        using WidgetSetParentFn = void(__thiscall*)(void* widget, void* parent);
-        using WidgetProxyBindFn = void(__thiscall*)(void* widgetProxy, void* widget);
         using WidgetProxyBindByNameFn = void(__thiscall*)(void* widgetProxy, const char* screenName, const char* widgetName);
         using WidgetProxyIsValidFn = bool(__thiscall*)(const void* widgetProxy);
-        using WidgetProxySetVisibleFn = void(__thiscall*)(void* widgetProxy, bool visible);
-        using WidgetProxySetEnabledFn = void(__thiscall*)(void* widgetProxy, bool enabled);
         using WidgetProxyForceActiveFn = void(__thiscall*)(void* widgetProxy, bool active);
-        using GenericWidgetCtorFn = void(__thiscall*)(void* genericWidget);
-        using GenericWidgetDtorFn = void(__thiscall*)(void* genericWidget);
         using CustomWidgetCtorFn = void(__thiscall*)(void* customWidget);
         using CustomWidgetDtorFn = void(__thiscall*)(void* customWidget);
-        using ArtLabelCtorFn = void(__thiscall*)(void* artLabel);
-        using ArtLabelDtorFn = void(__thiscall*)(void* artLabel);
-        using ArtLabelSetAllArtVisibleFn = void(__thiscall*)(void* artLabel, bool visible);
-        using ButtonCtorFn = void(__thiscall*)(void* button);
-        using ButtonDtorFn = void(__thiscall*)(void* button);
-        using ButtonSetTextFn = void(__thiscall*)(void* button, const void* locString);
-        using CheckButtonCtorFn = void(__thiscall*)(void* checkButton);
-        using CheckButtonDtorFn = void(__thiscall*)(void* checkButton);
-        using CheckButtonSetCheckedFn = void(__thiscall*)(void* checkButton, bool checked);
-        using CheckButtonGetCheckedFn = bool(__thiscall*)(const void* checkButton);
         using CheckButtonSetTextFn = void(__thiscall*)(void* checkButton, const void* locString);
-        using TextLabelCtorFn = void(__thiscall*)(void* textLabel);
-        using TextLabelDtorFn = void(__thiscall*)(void* textLabel);
-        using TextLabelSetTextFn = void(__thiscall*)(void* textLabel, const void* locString);
-        using TextLabelSetMultilineFn = void(__thiscall*)(void* textLabel, bool multiline);
-        using TextLabelSetAutoSizeFn = void(__thiscall*)(void* textLabel, bool autoSize);
         using CustomListBoxCtorFn = void(__thiscall*)(void* customListBox);
         using CustomListBoxDtorFn = void(__thiscall*)(void* customListBox);
         using CustomListBoxAddItemFn = long(__thiscall*)(void* customListBox, const char* itemName, bool enabled);
@@ -256,12 +222,12 @@ namespace ConfigUi::Frontend {
         using CustomListBoxGetOldCustomItemFn = void* (__thiscall*)(void* customListBox);
         using CustomListBoxItemOldBindFn = void(__thiscall*)(void* customListBoxItemOld, const void* listBoxProxy, const char* itemName, long itemIndex);
         using CustomListBoxItemOldSetTextFn = void(__thiscall*)(void* customListBoxItemOld, const void* locString);
-        using FindWidgetExtensionFn = void* (__thiscall*)(void* widget, int extensionId);
-        using FindWidgetByNameFn = void* (__stdcall*)(void* rootWidget, const char* name, int flags);
+        // Present in the SDK UI API, but must remain manually resolved:
+        // ExtractGetterOffset() reads raw machine code from the actual game function pointer;
+        // the SDK wraps these in C++ functions, so GetUiApi().Widget_GetPresentation cannot
+        // be passed to ExtractGetterOffset.
         using WidgetGetPresentationFn = void* (__thiscall*)(void* widget);
-        using WidgetSetPresentationFn = void(__thiscall*)(void* widget, void* presentation);
         using WidgetGetHitAreaFn = void* (__thiscall*)(void* widget);
-        using WidgetSetHitAreaFn = void(__thiscall*)(void* widget, void* hitArea);
         using WidgetProxyGetWidgetFn = void* (__thiscall*)(void* widgetProxy);
 
         // Widget::GetState(WidgetState) -> bool
@@ -273,41 +239,6 @@ namespace ConfigUi::Frontend {
         using LocStringCtorFn = void(__thiscall*)(void* locString, const wchar_t* text);
         using LocStringDtorFn = void(__thiscall*)(void* locString);
 
-
-        struct OpaqueGenericWidget {
-            alignas(16) std::array<std::byte, kOpaqueGenericWidgetStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-            const void* Get() const { return storage.data(); }
-        };
-
-        struct OpaqueButton {
-            alignas(16) std::array<std::byte, kOpaqueButtonStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-            const void* Get() const { return storage.data(); }
-        };
-
-        struct OpaqueCheckButton {
-            alignas(16) std::array<std::byte, kOpaqueButtonStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-            const void* Get() const { return storage.data(); }
-        };
-
-        struct OpaqueTextLabel {
-            alignas(16) std::array<std::byte, kOpaqueTextLabelStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-            const void* Get() const { return storage.data(); }
-        };
-
-        struct OpaqueArtLabel {
-            alignas(16) std::array<std::byte, kOpaqueButtonStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-            const void* Get() const { return storage.data(); }
-        };
-
-        struct OpaqueLocString {
-            alignas(void*) std::array<std::byte, kOpaqueLocStringStorageSize> storage = {};
-            void* Get() { return storage.data(); }
-        };
 
         struct OpaqueCustomListBox {
             alignas(16) std::array<std::byte, kOpaqueCustomListBoxStorageSize> storage = {};
@@ -385,7 +316,6 @@ namespace ConfigUi::Frontend {
             POINT pendingMouseMoveClientPosition = {};
             bool panelScrollBarDragging = false;
             float panelScrollBarDragOffsetY = 0.0f;
-            GetScreenManagerFn getScreenManager = nullptr;
             GetStyleManagerFn getStyleManager = nullptr;
             std::uintptr_t userInterfaceBase = 0u;
             void* deactivateAllScreensTarget = nullptr;
@@ -401,42 +331,17 @@ namespace ConfigUi::Frontend {
             ScreenSetNameFn screenSetName = nullptr;
             ScreenSetHiddenFn screenSetHidden = nullptr;
             ScreenSetNativeAspectFn screenSetNativeAspect = nullptr;
-            ScreenGetRootWidgetFn screenGetRootWidget = nullptr;
             LoadScreenByNameFn loadScreenByName = nullptr;
             UnloadScreenFn unloadScreen = nullptr;
             GetKeyFromNameFn getKeyFromName = nullptr;
             CheckInputQueueForKeyPressFn checkInputQueueForKeyPress = nullptr;
             IsKeyPressedFn isKeyPressed = nullptr;
-            WidgetSetNameFn widgetSetName = nullptr;
-            WidgetSetPositionFn widgetSetPosition = nullptr;
-            WidgetSetSizeFn widgetSetSize = nullptr;
-            WidgetSetParentFn widgetSetParent = nullptr;
-            WidgetProxyBindFn widgetProxyBind = nullptr;
             WidgetProxyBindByNameFn widgetProxyBindByName = nullptr;
             WidgetProxyIsValidFn widgetProxyIsValid = nullptr;
-            WidgetProxySetVisibleFn widgetProxySetVisible = nullptr;
-            WidgetProxySetEnabledFn widgetProxySetEnabled = nullptr;
             WidgetProxyForceActiveFn widgetProxyForceActive = nullptr;
-            GenericWidgetCtorFn genericWidgetCtor = nullptr;
-            GenericWidgetDtorFn genericWidgetDtor = nullptr;
             CustomWidgetCtorFn customWidgetCtor = nullptr;
             CustomWidgetDtorFn customWidgetDtor = nullptr;
-            ArtLabelCtorFn artLabelCtor = nullptr;
-            ArtLabelDtorFn artLabelDtor = nullptr;
-            ArtLabelSetAllArtVisibleFn artLabelSetAllArtVisible = nullptr;
-            ButtonCtorFn buttonCtor = nullptr;
-            ButtonDtorFn buttonDtor = nullptr;
-            ButtonSetTextFn buttonSetText = nullptr;
-            CheckButtonCtorFn checkButtonCtor = nullptr;
-            CheckButtonDtorFn checkButtonDtor = nullptr;
-            CheckButtonSetCheckedFn checkButtonSetChecked = nullptr;
-            CheckButtonGetCheckedFn checkButtonGetChecked = nullptr;
             CheckButtonSetTextFn checkButtonSetText = nullptr;
-            TextLabelCtorFn textLabelCtor = nullptr;
-            TextLabelDtorFn textLabelDtor = nullptr;
-            TextLabelSetTextFn textLabelSetText = nullptr;
-            TextLabelSetMultilineFn textLabelSetMultiline = nullptr;
-            TextLabelSetAutoSizeFn textLabelSetAutoSize = nullptr;
             CustomListBoxCtorFn customListBoxCtor = nullptr;
             CustomListBoxDtorFn customListBoxDtor = nullptr;
             CustomListBoxAddItemFn customListBoxAddItem = nullptr;
@@ -450,21 +355,13 @@ namespace ConfigUi::Frontend {
             CustomListBoxGetOldCustomItemFn customListBoxGetOldCustomItem = nullptr;
             CustomListBoxItemOldBindFn customListBoxItemOldBind = nullptr;
             CustomListBoxItemOldSetTextFn customListBoxItemOldSetText = nullptr;
-            FindWidgetExtensionFn findWidgetExtension = nullptr;
-            FindWidgetByNameFn findWidgetByName = nullptr;
             WidgetGetPresentationFn widgetGetPresentation = nullptr;
-            WidgetSetPresentationFn widgetSetPresentation = nullptr;
             WidgetGetHitAreaFn widgetGetHitArea = nullptr;
-            WidgetSetHitAreaFn widgetSetHitArea = nullptr;
             WidgetProxyGetWidgetFn widgetProxyGetWidget = nullptr;
             WidgetGetStateFn widgetGetState = nullptr;
-            LocStringCtorFn locStringCtor = nullptr;
-            LocStringDtorFn locStringDtor = nullptr;
             unsigned char* filePathHdPatchedJneAddress = nullptr;
             std::array<unsigned char, 2> filePathHdOriginalJneBytes = {};
             bool filePathHdForwardSlashPatchApplied = false;
-            void* addRenderChildAddress = nullptr;
-            void* widgetFactoryCreateAddress = nullptr;
             void* nativeSliderBindInputAddress = nullptr;
             bool fileOverrideRegistered = false;
             bool toggleKeyWasDown = false;
@@ -502,17 +399,17 @@ namespace ConfigUi::Frontend {
             std::array<void*, kVisibleRowCount> rowSliderWidgets = {};
             std::array<void*, kVisibleRowCount> rowSliderButtonWidgets = {};
             std::array<void*, kVisibleRowCount> rowSliderBarWidgets = {};
-            OpaqueTextLabel titleLabel = {};
-            OpaqueTextLabel modSelectorValueLabel = {};
-            OpaqueButton modSelectorButton = {};
-            std::array<OpaqueTextLabel, kVisibleRowCount> rowLabels = {};
+            ModSDK::UI::TextLabel titleLabel = {};
+            ModSDK::UI::TextLabel modSelectorValueLabel = {};
+            ModSDK::UI::Button modSelectorButton = {};
+            std::array<ModSDK::UI::TextLabel, kVisibleRowCount> rowLabels = {};
             // Enum proxies
-            std::array<OpaqueTextLabel, kVisibleRowCount> rowValueLabels = {};
-            std::array<OpaqueButton, kVisibleRowCount> rowArrowButtons = {};
+            std::array<ModSDK::UI::TextLabel, kVisibleRowCount> rowValueLabels = {};
+            std::array<ModSDK::UI::Button, kVisibleRowCount> rowArrowButtons = {};
             // Bool proxies
-            std::array<OpaqueCheckButton, kVisibleRowCount> rowCheckButtons = {};
+            std::array<ModSDK::UI::CheckButton, kVisibleRowCount> rowCheckButtons = {};
             // Int/Float slider proxies
-            std::array<OpaqueGenericWidget, kVisibleRowCount> rowSliders = {};
+            std::array<ModSDK::UI::GenericWidget, kVisibleRowCount> rowSliders = {};
             std::array<OpaqueNativeSlider, kVisibleRowCount> rowNativeSliders = {};
             // State tracking
             std::array<bool, kVisibleRowCount> rowComboBoxWasActive = {};
@@ -1175,7 +1072,6 @@ namespace ConfigUi::Frontend {
             if ((direction == 0) ||
                 (itemCount <= 4u) ||
                 (listBoxWidget == nullptr) ||
-                (state.widgetProxyBind == nullptr) ||
                 (state.customListBoxCtor == nullptr) ||
                 (state.customListBoxDtor == nullptr) ||
                 (state.customListBoxGetScrollPosition == nullptr) ||
@@ -1186,7 +1082,7 @@ namespace ConfigUi::Frontend {
 
             OpaqueCustomListBox listBoxProxy = {};
             state.customListBoxCtor(listBoxProxy.Get());
-            state.widgetProxyBind(listBoxProxy.Get(), listBoxWidget);
+            ModSDK::UI::WidgetProxy_Bind(listBoxProxy.Get(), listBoxWidget);
 
             const float currentPosition = state.customListBoxGetScrollPosition(listBoxProxy.Get());
             const auto* range = reinterpret_cast<const CustomListBoxScrollRange*>(state.customListBoxGetScrollRange(listBoxProxy.Get()));
@@ -1517,14 +1413,12 @@ namespace ConfigUi::Frontend {
         bool ResolveInterop(State& state) {
             HMODULE userInterfaceModule = AcquireModule(kUserInterfaceModuleName);
             HMODULE platformModule = AcquireModule(kPlatformModuleName);
-            HMODULE localizerModule = AcquireModule(kLocalizerModuleName);
 
-            if ((userInterfaceModule == nullptr) || (platformModule == nullptr) || (localizerModule == nullptr)) {
+            if ((userInterfaceModule == nullptr) || (platformModule == nullptr)) {
                 return false;
             }
 
             const bool resolved =
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?i@ScreenManager@UI@@SGPAV12@XZ", state.getScreenManager) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?Update@ScreenManager@UI@@QAEXM@Z", state.screenManagerUpdateTarget) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?ActivateScreen@ScreenManager@UI@@QAEXPAVScreen@2@W4ScreenActivationType@12@_N@Z", state.activateScreen) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?DeactivateAllScreens@ScreenManager@UI@@QAEXXZ", state.deactivateAllScreensTarget) &&
@@ -1532,45 +1426,19 @@ namespace ConfigUi::Frontend {
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?IsScreenActive@ScreenManager@UI@@QBE_NPBD@Z", state.isScreenActiveByName) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetTopMost@ScreenManager@UI@@QAEX_N@Z", state.setTopMost) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetName@Screen@UI@@QAEXPBD@Z", state.screenSetName) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetRootWidget@Screen@UI@@QAEPAVWidget@2@XZ", state.screenGetRootWidget) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?LoadScreen@ScreenManager@UI@@QAEPAVScreen@2@PBD@Z", state.loadScreenByName) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?UnloadScreen@ScreenManager@UI@@QAEXPAVScreen@2@@Z", state.unloadScreenTarget) &&
                 ResolveRequiredExport(platformModule, kPlatformModuleName, "?GetKeyFromName@Input@Plat@@YG?AW4InputKey@2@PBD@Z", state.getKeyFromName) &&
                 ResolveRequiredExport(platformModule, kPlatformModuleName, "?CheckInputQueueForKeyPress@Input@Plat@@YG_NW4InputKey@2@@Z", state.checkInputQueueForKeyPress) &&
                 ResolveRequiredExport(platformModule, kPlatformModuleName, "?IsKeyPressed@Input@Plat@@YG_NW4InputKey@2@@Z", state.isKeyPressed) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetPosition@Widget@UI@@QAEXMM@Z", state.widgetSetPosition) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetSize@Widget@UI@@QAEXMM@Z", state.widgetSetSize) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetParent@Widget@UI@@QAEXPAV12@@Z", state.widgetSetParent) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?Bind@WidgetProxy@UI@@IAEXPAVWidget@2@@Z", state.widgetProxyBind) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?Bind@WidgetProxy@UI@@QAEXPBD0@Z", state.widgetProxyBindByName) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?IsValid@WidgetProxy@UI@@QBE_NXZ", state.widgetProxyIsValid) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetVisible@WidgetProxy@UI@@UAEX_N@Z", state.widgetProxySetVisible) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetEnabled@WidgetProxy@UI@@UAEX_N@Z", state.widgetProxySetEnabled) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?ForceActive@WidgetProxy@UI@@UAEX_N@Z", state.widgetProxyForceActive) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0GenericWidget@UI@@QAE@XZ", state.genericWidgetCtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1GenericWidget@UI@@UAE@XZ", state.genericWidgetDtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0CustomWidget@UI@@QAE@XZ", state.customWidgetCtor) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1CustomWidget@UI@@UAE@XZ", state.customWidgetDtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0ArtLabel@UI@@QAE@XZ", state.artLabelCtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1ArtLabel@UI@@UAE@XZ", state.artLabelDtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetAllArtVisible@ArtLabel@UI@@QAEX_N@Z", state.artLabelSetAllArtVisible) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0Button@UI@@QAE@XZ", state.buttonCtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1Button@UI@@UAE@XZ", state.buttonDtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetText@Button@UI@@QAEXABVLocString@@@Z", state.buttonSetText) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0CheckButton@UI@@QAE@XZ", state.checkButtonCtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1CheckButton@UI@@UAE@XZ", state.checkButtonDtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetChecked@CheckButton@UI@@QAEX_N@Z", state.checkButtonSetChecked) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetChecked@CheckButton@UI@@QBE_NXZ", state.checkButtonGetChecked) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??0TextLabel@UI@@QAE@XZ", state.textLabelCtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "??1TextLabel@UI@@UAE@XZ", state.textLabelDtor) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetText@TextLabel@UI@@QAEXABVLocString@@@Z", state.textLabelSetText) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetPresentation@Widget@UI@@QAEPAVPresentation@2@XZ", state.widgetGetPresentation) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetPresentation@Widget@UI@@QAEXPAVPresentation@2@@Z", state.widgetSetPresentation) &&
                 ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetHitArea@Widget@UI@@QAEPAVHitArea@2@XZ", state.widgetGetHitArea) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?SetHitArea@Widget@UI@@QAEXPAVHitArea@2@@Z", state.widgetSetHitArea) &&
-                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetWidget@WidgetProxy@UI@@IAEPAVWidget@2@XZ", state.widgetProxyGetWidget) &&
-                ResolveRequiredExport(localizerModule, kLocalizerModuleName, "??0LocString@@QAE@PB_W@Z", state.locStringCtor) &&
-                ResolveRequiredExport(localizerModule, kLocalizerModuleName, "??1LocString@@QAE@XZ", state.locStringDtor);
+                ResolveRequiredExport(userInterfaceModule, kUserInterfaceModuleName, "?GetWidget@WidgetProxy@UI@@IAEPAVWidget@2@XZ", state.widgetProxyGetWidget);
 
             if (!resolved) {
                 return false;
@@ -1579,10 +1447,6 @@ namespace ConfigUi::Frontend {
             const std::uintptr_t userInterfaceBase = reinterpret_cast<std::uintptr_t>(userInterfaceModule);
             state.userInterfaceBase = userInterfaceBase;
             state.createBlankScreen = reinterpret_cast<CreateBlankScreenFn>(userInterfaceBase + kCreateBlankScreenRva);
-            state.findWidgetExtension = reinterpret_cast<FindWidgetExtensionFn>(userInterfaceBase + kFindWidgetExtensionRva);
-            state.findWidgetByName = reinterpret_cast<FindWidgetByNameFn>(userInterfaceBase + kFindWidgetByNameRva);
-            state.addRenderChildAddress = reinterpret_cast<void*>(userInterfaceBase + kAddRenderChildRva);
-            state.widgetFactoryCreateAddress = reinterpret_cast<void*>(userInterfaceBase + kWidgetFactoryCreateRva);
             HMODULE gameModule = GetModuleHandleA(kGameExecutableModuleName);
             if (gameModule == nullptr) {
                 gameModule = GetModuleHandleA(nullptr);
@@ -1592,15 +1456,8 @@ namespace ConfigUi::Frontend {
                 ? nullptr
                 : reinterpret_cast<void*>(reinterpret_cast<std::uintptr_t>(gameModule) + kNativeSliderBindInputRva);
 
-            ResolveOptionalExport(
-                userInterfaceModule,
-                "?SetName@Widget@UI@@QAEXPBD@Z",
-                state.widgetSetName
-            );
             ResolveOptionalExport(userInterfaceModule, "?SetHidden@Screen@UI@@QAEX_N@Z", state.screenSetHidden);
             ResolveOptionalExport(userInterfaceModule, "?SetNativeAspect@Screen@UI@@QAEXM@Z", state.screenSetNativeAspect);
-            ResolveOptionalExport(userInterfaceModule, "?SetMultiline@TextLabel@UI@@QAEX_N@Z", state.textLabelSetMultiline);
-            ResolveOptionalExport(userInterfaceModule, "?SetAutoSize@TextLabel@UI@@QAEX_N@Z", state.textLabelSetAutoSize);
             ResolveOptionalExport(userInterfaceModule, "?GetState@Widget@UI@@QBE_NW4WidgetState@12@@Z", state.widgetGetState);
             ResolveOptionalExport(userInterfaceModule, "?SetText@CheckButton@UI@@QAEXABVLocString@@@Z", state.checkButtonSetText);
             ResolveOptionalExport(userInterfaceModule, "??0CustomListBox@UI@@QAE@XZ", state.customListBoxCtor);
@@ -1773,16 +1630,12 @@ namespace ConfigUi::Frontend {
             return pressed;
         }
 
-        ScreenManagerHandle* GetScreenManager(State& state) {
-            return state.getScreenManager == nullptr ? nullptr : state.getScreenManager();
+        ScreenManagerHandle* GetScreenManager() {
+            return static_cast<ScreenManagerHandle*>(ModSDK::UI::ScreenManager_GetInstance());
         }
 
-        void* GetScreenRootWidget(State& state, void* screen) {
-            if ((screen == nullptr) || (state.screenGetRootWidget == nullptr)) {
-                return nullptr;
-            }
-
-            return state.screenGetRootWidget(screen);
+        void* GetScreenRootWidget(void* screen) {
+            return ModSDK::UI::Screen_GetRootWidget(screen);
         }
 
         std::string BuildEmptyButtonText() {
@@ -1972,14 +1825,14 @@ namespace ConfigUi::Frontend {
         }
 
         void ResetOverlayProxyStorage(State& state) {
-            state.titleLabel = {};
-            state.modSelectorValueLabel = {};
-            state.modSelectorButton = {};
-            state.rowLabels = {};
-            state.rowValueLabels = {};
-            state.rowArrowButtons = {};
-            state.rowCheckButtons = {};
-            state.rowSliders = {};
+            state.titleLabel.Reset();
+            state.modSelectorValueLabel.Reset();
+            state.modSelectorButton.Reset();
+            for (auto& w : state.rowLabels)       { w.Reset(); }
+            for (auto& w : state.rowValueLabels)  { w.Reset(); }
+            for (auto& w : state.rowArrowButtons) { w.Reset(); }
+            for (auto& w : state.rowCheckButtons) { w.Reset(); }
+            for (auto& w : state.rowSliders)      { w.Reset(); }
             // NOTE: rowNativeSliders is intentionally NOT zeroed here.
             // The native slider CustomWidget controllers must stay alive
             // until the engine's UnloadScreen has finished processing
@@ -2035,10 +1888,7 @@ namespace ConfigUi::Frontend {
             ZeroWidgetField(widget, presentationOffset);
             ZeroWidgetField(widget, hitAreaOffset);
 
-            if (state.findWidgetExtension == nullptr) {
-                return;
-            }
-            void* ext = state.findWidgetExtension(widget, kDrawChildrenExtensionId);
+            void* ext = ModSDK::UI::FindWidgetExtension(widget, kDrawChildrenExtensionId);
             if (ext == nullptr) {
                 return;
             }
@@ -2055,10 +1905,12 @@ namespace ConfigUi::Frontend {
         // Clear shared Presentation pointers on the overlay's entire widget tree
         // so the engine does not double-free them when it destroys our screen.
         void DetachSharedPresentations(State& state, void* screen) {
-            if (screen == nullptr || state.screenGetRootWidget == nullptr) {
+            if (screen == nullptr) {
                 return;
             }
 
+            // state.widgetGetPresentation/widgetGetHitArea are the raw game function pointers
+            // (not SDK wrappers), required for ExtractGetterOffset to inspect instruction bytes.
             const int presentationOffset = ExtractGetterOffset(
                 reinterpret_cast<void*>(state.widgetGetPresentation)
             );
@@ -2071,7 +1923,7 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            void* rootWidget = state.screenGetRootWidget(screen);
+            void* rootWidget = ModSDK::UI::Screen_GetRootWidget(screen);
             if (rootWidget != nullptr) {
                 ClearAllPresentationsInTree(state, rootWidget, presentationOffset, hitAreaOffset);
             }
@@ -2170,20 +2022,8 @@ namespace ConfigUi::Frontend {
 
 
         void* CreateRawWidgetByType(State& state, const char* widgetTypeName) {
-            if ((state.widgetFactoryCreateAddress == nullptr) || (widgetTypeName == nullptr)) {
-                return nullptr;
-            }
-
-            void* widget = nullptr;
-            void* createFunction = state.widgetFactoryCreateAddress;
-            __asm {
-                mov edi, widgetTypeName
-                mov eax, createFunction
-                push kWidgetFactoryCreateFlag
-                call eax
-                mov widget, eax
-            }
-            return widget;
+            (void)state;
+            return ModSDK::UI::WidgetFactory_Create(widgetTypeName);
         }
 
         void ConfigureRawWidget(
@@ -2196,69 +2036,41 @@ namespace ConfigUi::Frontend {
             float sizeY,
             void* parent = nullptr
         ) {
-            if ((widget == nullptr) || (state.widgetSetPosition == nullptr) || (state.widgetSetSize == nullptr)) {
+            if (widget == nullptr) {
                 return;
             }
 
-            if ((parent != nullptr) && (state.widgetSetParent != nullptr)) {
-                state.widgetSetParent(widget, parent);
-            }
-
-            if ((state.widgetSetName != nullptr) && (name != nullptr) && (name[0] != '\0')) {
-                state.widgetSetName(widget, name);
-            }
-
-            state.widgetSetPosition(widget, positionX, positionY);
-            state.widgetSetSize(widget, sizeX, sizeY);
+            ModSDK::UI::ConfigureWidget(widget, parent, (name != nullptr && name[0] != '\0') ? name : nullptr,
+                positionX, positionY, sizeX, sizeY);
         }
 
-        bool BindButtonProxy(State& state, OpaqueButton& button, void* rawWidget) {
-            if ((rawWidget == nullptr) || (state.buttonCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
-                return false;
-            }
-
-            state.buttonCtor(button.Get());
-            state.widgetProxyBind(button.Get(), rawWidget);
+        bool BindButtonProxy(ModSDK::UI::Button& button, void* rawWidget) {
+            if (rawWidget == nullptr) { return false; }
+            button.Construct(rawWidget);
             return true;
         }
 
-        bool BindCheckButtonProxy(State& state, OpaqueCheckButton& checkButton, void* rawWidget) {
-            if ((rawWidget == nullptr) || (state.checkButtonCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
-                return false;
-            }
-
-            state.checkButtonCtor(checkButton.Get());
-            state.widgetProxyBind(checkButton.Get(), rawWidget);
+        bool BindCheckButtonProxy(ModSDK::UI::CheckButton& checkButton, void* rawWidget) {
+            if (rawWidget == nullptr) { return false; }
+            checkButton.Construct(rawWidget);
             return true;
         }
 
-        bool BindGenericWidgetProxy(State& state, OpaqueGenericWidget& genericWidget, void* rawWidget) {
-            if ((rawWidget == nullptr) || (state.genericWidgetCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
-                return false;
-            }
-
-            state.genericWidgetCtor(genericWidget.Get());
-            state.widgetProxyBind(genericWidget.Get(), rawWidget);
+        bool BindGenericWidgetProxy(ModSDK::UI::GenericWidget& genericWidget, void* rawWidget) {
+            if (rawWidget == nullptr) { return false; }
+            genericWidget.Construct(rawWidget);
             return true;
         }
 
-        bool BindTextLabelProxy(State& state, OpaqueTextLabel& textLabel, void* rawWidget) {
-            if ((rawWidget == nullptr) || (state.textLabelCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
-                return false;
-            }
-
-            state.textLabelCtor(textLabel.Get());
-            state.widgetProxyBind(textLabel.Get(), rawWidget);
+        bool BindTextLabelProxy(ModSDK::UI::TextLabel& textLabel, void* rawWidget) {
+            if (rawWidget == nullptr) { return false; }
+            textLabel.Construct(rawWidget);
             return true;
         }
 
-        bool BindArtLabelProxy(State& state, OpaqueArtLabel& artLabel, void* rawWidget) {
-            if ((rawWidget == nullptr) || (state.artLabelCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
-                return false;
-            }
-
-            state.artLabelCtor(artLabel.Get());
-            state.widgetProxyBind(artLabel.Get(), rawWidget);
+        bool BindArtLabelProxy(ModSDK::UI::ArtLabel& artLabel, void* rawWidget) {
+            if (rawWidget == nullptr) { return false; }
+            artLabel.Construct(rawWidget);
             return true;
         }
 
@@ -2281,58 +2093,30 @@ namespace ConfigUi::Frontend {
         void ApplyWidgetProxyState(State& state, void* widgetProxy);
 
         bool SetRawWidgetVisible(State& state, void* rawWidget, bool visible) {
-            if ((rawWidget == nullptr) ||
-                (state.genericWidgetCtor == nullptr) ||
-                (state.genericWidgetDtor == nullptr) ||
-                (state.widgetProxyBind == nullptr) ||
-                (state.widgetProxySetVisible == nullptr)) {
-                return false;
-            }
-
-            OpaqueGenericWidget widgetProxy = {};
-            state.genericWidgetCtor(widgetProxy.Get());
-            state.widgetProxyBind(widgetProxy.Get(), rawWidget);
-            state.widgetProxySetVisible(widgetProxy.Get(), visible);
-            state.genericWidgetDtor(widgetProxy.Get());
+            if (rawWidget == nullptr) { return false; }
+            ModSDK::UI::GenericWidget widgetProxy;
+            widgetProxy.Construct(rawWidget);
+            widgetProxy.SetVisible(visible);
             return true;
         }
 
         bool ApplyRawWidgetState(State& state, void* rawWidget) {
-            if ((rawWidget == nullptr) ||
-                (state.genericWidgetCtor == nullptr) ||
-                (state.genericWidgetDtor == nullptr) ||
-                (state.widgetProxyBind == nullptr)) {
-                return false;
-            }
-
-            OpaqueGenericWidget widgetProxy = {};
-            state.genericWidgetCtor(widgetProxy.Get());
-            state.widgetProxyBind(widgetProxy.Get(), rawWidget);
-            ApplyWidgetProxyState(state, widgetProxy.Get());
-            state.genericWidgetDtor(widgetProxy.Get());
+            if (rawWidget == nullptr) { return false; }
+            ModSDK::UI::GenericWidget widgetProxy;
+            widgetProxy.Construct(rawWidget);
+            ApplyWidgetProxyState(state, widgetProxy.get());
             return true;
         }
 
         void* FindWidgetExtensionObject(State& state, void* widget, int extensionId) {
-            if ((widget == nullptr) || (state.findWidgetExtension == nullptr) || (extensionId == 0)) {
+            (void)state;
+            if ((widget == nullptr) || (extensionId == 0)) {
                 return nullptr;
             }
 
-            return state.findWidgetExtension(widget, extensionId);
+            return ModSDK::UI::FindWidgetExtension(widget, extensionId);
         }
 
-        void* FindNamedWidget(State& state, void* searchRoot, const char* widgetName) {
-            if ((searchRoot == nullptr) || (widgetName == nullptr) || (state.findWidgetByName == nullptr)) {
-                return nullptr;
-            }
-
-            void* widget = state.findWidgetByName(searchRoot, widgetName, 0);
-            if (widget == nullptr) {
-                widget = state.findWidgetByName(searchRoot, widgetName, 1);
-            }
-
-            return widget;
-        }
 
         bool ResolveComboBoxChildWidgets(
             State& state,
@@ -2350,21 +2134,21 @@ namespace ConfigUi::Frontend {
             const std::string buttonName = std::string("btn_") + comboBoxName;
             const std::string listBoxName = std::string("lstBox_") + comboBoxName;
 
-            outLabelWidget = FindNamedWidget(state, comboBoxWidget, labelName.c_str());
-            outButtonWidget = FindNamedWidget(state, comboBoxWidget, buttonName.c_str());
-            outListBoxWidget = FindNamedWidget(state, comboBoxWidget, listBoxName.c_str());
+            outLabelWidget = ModSDK::UI::FindWidget(comboBoxWidget, labelName.c_str());
+            outButtonWidget = ModSDK::UI::FindWidget(comboBoxWidget, buttonName.c_str());
+            outListBoxWidget = ModSDK::UI::FindWidget(comboBoxWidget, listBoxName.c_str());
 
             if (((outLabelWidget == nullptr) || (outButtonWidget == nullptr) || (outListBoxWidget == nullptr)) &&
                 (state.rootWidgetRaw != nullptr) &&
                 (state.rootWidgetRaw != comboBoxWidget)) {
                 if (outLabelWidget == nullptr) {
-                    outLabelWidget = FindNamedWidget(state, state.rootWidgetRaw, labelName.c_str());
+                    outLabelWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, labelName.c_str());
                 }
                 if (outButtonWidget == nullptr) {
-                    outButtonWidget = FindNamedWidget(state, state.rootWidgetRaw, buttonName.c_str());
+                    outButtonWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, buttonName.c_str());
                 }
                 if (outListBoxWidget == nullptr) {
-                    outListBoxWidget = FindNamedWidget(state, state.rootWidgetRaw, listBoxName.c_str());
+                    outListBoxWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, listBoxName.c_str());
                 }
             }
 
@@ -2387,21 +2171,21 @@ namespace ConfigUi::Frontend {
             const std::string scrollBarName = std::string("scrlBar_") + listBoxName;
             const std::string itemTemplateName = std::string("itemTmplt_") + listBoxName;
 
-            outItemsWidget = FindNamedWidget(state, listBoxWidget, itemsName.c_str());
-            outScrollBarWidget = FindNamedWidget(state, listBoxWidget, scrollBarName.c_str());
-            outItemTemplateWidget = FindNamedWidget(state, listBoxWidget, itemTemplateName.c_str());
+            outItemsWidget = ModSDK::UI::FindWidget(listBoxWidget, itemsName.c_str());
+            outScrollBarWidget = ModSDK::UI::FindWidget(listBoxWidget, scrollBarName.c_str());
+            outItemTemplateWidget = ModSDK::UI::FindWidget(listBoxWidget, itemTemplateName.c_str());
 
             if (((outItemsWidget == nullptr) || (outScrollBarWidget == nullptr) || (outItemTemplateWidget == nullptr)) &&
                 (state.rootWidgetRaw != nullptr) &&
                 (state.rootWidgetRaw != listBoxWidget)) {
                 if (outItemsWidget == nullptr) {
-                    outItemsWidget = FindNamedWidget(state, state.rootWidgetRaw, itemsName.c_str());
+                    outItemsWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, itemsName.c_str());
                 }
                 if (outScrollBarWidget == nullptr) {
-                    outScrollBarWidget = FindNamedWidget(state, state.rootWidgetRaw, scrollBarName.c_str());
+                    outScrollBarWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, scrollBarName.c_str());
                 }
                 if (outItemTemplateWidget == nullptr) {
-                    outItemTemplateWidget = FindNamedWidget(state, state.rootWidgetRaw, itemTemplateName.c_str());
+                    outItemTemplateWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, itemTemplateName.c_str());
                 }
             }
 
@@ -2430,11 +2214,11 @@ namespace ConfigUi::Frontend {
             const std::string pageDownName = std::string("btnPgDn_") + scrollBarName;
             const std::string pageUpName = std::string("btnPgUp_") + scrollBarName;
 
-            outDecButtonWidget = FindNamedWidget(state, scrollBarWidget, decName.c_str());
-            outIncButtonWidget = FindNamedWidget(state, scrollBarWidget, incName.c_str());
-            outTrackButtonWidget = FindNamedWidget(state, scrollBarWidget, trackName.c_str());
-            outPageDownButtonWidget = FindNamedWidget(state, scrollBarWidget, pageDownName.c_str());
-            outPageUpButtonWidget = FindNamedWidget(state, scrollBarWidget, pageUpName.c_str());
+            outDecButtonWidget = ModSDK::UI::FindWidget(scrollBarWidget, decName.c_str());
+            outIncButtonWidget = ModSDK::UI::FindWidget(scrollBarWidget, incName.c_str());
+            outTrackButtonWidget = ModSDK::UI::FindWidget(scrollBarWidget, trackName.c_str());
+            outPageDownButtonWidget = ModSDK::UI::FindWidget(scrollBarWidget, pageDownName.c_str());
+            outPageUpButtonWidget = ModSDK::UI::FindWidget(scrollBarWidget, pageUpName.c_str());
 
             if (((outDecButtonWidget == nullptr) ||
                 (outIncButtonWidget == nullptr) ||
@@ -2444,19 +2228,19 @@ namespace ConfigUi::Frontend {
                 (state.rootWidgetRaw != nullptr) &&
                 (state.rootWidgetRaw != scrollBarWidget)) {
                 if (outDecButtonWidget == nullptr) {
-                    outDecButtonWidget = FindNamedWidget(state, state.rootWidgetRaw, decName.c_str());
+                    outDecButtonWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, decName.c_str());
                 }
                 if (outIncButtonWidget == nullptr) {
-                    outIncButtonWidget = FindNamedWidget(state, state.rootWidgetRaw, incName.c_str());
+                    outIncButtonWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, incName.c_str());
                 }
                 if (outTrackButtonWidget == nullptr) {
-                    outTrackButtonWidget = FindNamedWidget(state, state.rootWidgetRaw, trackName.c_str());
+                    outTrackButtonWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, trackName.c_str());
                 }
                 if (outPageDownButtonWidget == nullptr) {
-                    outPageDownButtonWidget = FindNamedWidget(state, state.rootWidgetRaw, pageDownName.c_str());
+                    outPageDownButtonWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, pageDownName.c_str());
                 }
                 if (outPageUpButtonWidget == nullptr) {
-                    outPageUpButtonWidget = FindNamedWidget(state, state.rootWidgetRaw, pageUpName.c_str());
+                    outPageUpButtonWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, pageUpName.c_str());
                 }
             }
 
@@ -2481,7 +2265,7 @@ namespace ConfigUi::Frontend {
 
         bool TransferDonorPresentationFrom(State& state, void* targetRawWidget, const char* donorScreenName, const char* donorWidgetName);
         bool AttachRenderChild(State& state, void* parentWidget, void* childWidget);
-        bool TrySetTextLabel(State& state, OpaqueTextLabel& textLabel, const std::string& text, bool multiline);
+        bool TrySetTextLabel(ModSDK::UI::TextLabel& textLabel, const std::string& text, bool multiline);
 
         bool EnsureListItemDirectText(
             State& state,
@@ -2492,7 +2276,7 @@ namespace ConfigUi::Frontend {
         ) {
             constexpr int kTextLabelExtensionId = 7;
 
-            if ((itemWidget == nullptr) || (state.textLabelCtor == nullptr) || (state.widgetProxyBind == nullptr)) {
+            if (itemWidget == nullptr) {
                 return false;
             }
 
@@ -2506,8 +2290,8 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            OpaqueTextLabel textLabel = {};
-            if (!BindTextLabelProxy(state, textLabel, itemWidget)) {
+            ModSDK::UI::TextLabel textLabel = {};
+            if (!BindTextLabelProxy(textLabel, itemWidget)) {
                 LogWarning(
                     "Mod Config UI: Failed to bind direct fallback text proxy for " + contextLabel +
                     " list item '" +
@@ -2517,10 +2301,7 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            const bool textSet = TrySetTextLabel(state, textLabel, displayText, false);
-            if (state.textLabelDtor != nullptr) {
-                state.textLabelDtor(textLabel.Get());
-            }
+            const bool textSet = TrySetTextLabel(textLabel, displayText, false);
 
             if (textSet) {
                 LogDebug(
@@ -2623,9 +2404,6 @@ namespace ConfigUi::Frontend {
 
         bool PopulateEnumListBox(State& state, void* listBoxWidget, const OptionEntry& optionEntry, std::size_t rowIndex) {
             if ((listBoxWidget == nullptr) ||
-                (state.widgetProxyBind == nullptr) ||
-                (state.locStringCtor == nullptr) ||
-                (state.locStringDtor == nullptr) ||
                 (state.customListBoxCtor == nullptr) ||
                 (state.customListBoxDtor == nullptr) ||
                 (state.customListBoxAddItem == nullptr) ||
@@ -2639,7 +2417,7 @@ namespace ConfigUi::Frontend {
 
             OpaqueCustomListBox listBoxProxy = {};
             state.customListBoxCtor(listBoxProxy.Get());
-            state.widgetProxyBind(listBoxProxy.Get(), listBoxWidget);
+            ModSDK::UI::WidgetProxy_Bind(listBoxProxy.Get(), listBoxWidget);
             LogDebug(
                 "Mod Config UI: Bound CustomListBox proxy for row " +
                 std::to_string(rowIndex) +
@@ -2683,14 +2461,13 @@ namespace ConfigUi::Frontend {
                 const std::string itemName = MakeRowComboBoxListItemName(rowIndex, choiceIndex);
                 const std::string displayText = BuildChoiceDisplayText(choiceEntry);
                 const std::wstring wideText = ToWide(displayText);
-                OpaqueLocString locString = {};
-                state.locStringCtor(locString.Get(), wideText.c_str());
+                ModSDK::UI::LocString locString(wideText.c_str());
                 const long addResult = state.customListBoxAddItem(
                     listBoxProxy.Get(),
                     itemName.c_str(),
                     true
                 );
-                void* const itemWidget = FindNamedWidget(state, listBoxWidget, itemName.c_str());
+                void* const itemWidget = ModSDK::UI::FindWidget(listBoxWidget, itemName.c_str());
                 if (!listItemTextSubItemIndexResolved) {
                     if (itemWidget == nullptr) {
                         LogDebug(
@@ -2724,7 +2501,7 @@ namespace ConfigUi::Frontend {
                         itemName.c_str(),
                         listItemTextSubItemIndex
                     );
-                    state.customListBoxItemOldSetText(oldItemProxy, locString.Get());
+                    state.customListBoxItemOldSetText(oldItemProxy, locString.get());
                     usedNativeItemTextPath = true;
                 }
                 else if (addResult >= 0 && itemWidget != nullptr) {
@@ -2757,7 +2534,6 @@ namespace ConfigUi::Frontend {
                         "'."
                     );
                 }
-                state.locStringDtor(locString.Get());
 
                 if (choiceEntry.value == optionEntry.currentValue.enumValue) {
                     selectedChoiceIndex = static_cast<long>(choiceIndex);
@@ -2794,9 +2570,6 @@ namespace ConfigUi::Frontend {
         bool PopulateModListBox(State& state) {
             if ((state.catalog == nullptr) ||
                 (state.modSelectorListBoxWidget == nullptr) ||
-                (state.widgetProxyBind == nullptr) ||
-                (state.locStringCtor == nullptr) ||
-                (state.locStringDtor == nullptr) ||
                 (state.customListBoxCtor == nullptr) ||
                 (state.customListBoxDtor == nullptr) ||
                 (state.customListBoxAddItem == nullptr) ||
@@ -2810,7 +2583,7 @@ namespace ConfigUi::Frontend {
 
             OpaqueCustomListBox listBoxProxy = {};
             state.customListBoxCtor(listBoxProxy.Get());
-            state.widgetProxyBind(listBoxProxy.Get(), state.modSelectorListBoxWidget);
+            ModSDK::UI::WidgetProxy_Bind(listBoxProxy.Get(), state.modSelectorListBoxWidget);
             LogDebug("Mod Config UI: Bound CustomListBox proxy for mod selector.");
 
             void* const oldItemProxy = state.customListBoxGetOldCustomItem(listBoxProxy.Get());
@@ -2833,10 +2606,9 @@ namespace ConfigUi::Frontend {
                 const std::string itemName = MakeModSelectorListItemName(modIndex);
                 const std::string displayText = BuildModDisplayText(mods[modIndex]);
                 const std::wstring wideText = ToWide(displayText);
-                OpaqueLocString locString = {};
-                state.locStringCtor(locString.Get(), wideText.c_str());
+                ModSDK::UI::LocString locString(wideText.c_str());
                 const long addResult = state.customListBoxAddItem(listBoxProxy.Get(), itemName.c_str(), true);
-                void* const itemWidget = FindNamedWidget(state, state.modSelectorListBoxWidget, itemName.c_str());
+                void* const itemWidget = ModSDK::UI::FindWidget(state.modSelectorListBoxWidget, itemName.c_str());
                 if (!listItemTextSubItemIndexResolved && (itemWidget != nullptr)) {
                     listItemTextSubItemIndexResolved = TryResolveListItemTextSubItemIndex(
                         state,
@@ -2861,7 +2633,7 @@ namespace ConfigUi::Frontend {
                         itemName.c_str(),
                         listItemTextSubItemIndex
                     );
-                    state.customListBoxItemOldSetText(oldItemProxy, locString.Get());
+                    state.customListBoxItemOldSetText(oldItemProxy, locString.get());
                 }
                 else if ((addResult >= 0) && (itemWidget != nullptr)) {
                     EnsureListItemDirectText(
@@ -2872,8 +2644,6 @@ namespace ConfigUi::Frontend {
                         displayText
                     );
                 }
-
-                state.locStringDtor(locString.Get());
             }
 
             long selectedNativeIndex = -1;
@@ -3273,8 +3043,7 @@ namespace ConfigUi::Frontend {
         void ConfigureRowSliderProgress(State& state, std::size_t rowIndex, float progress) {
             if ((rowIndex >= kVisibleRowCount) ||
                 (state.rowSliderWidgets[rowIndex] == nullptr) ||
-                (state.rowSliderButtonWidgets[rowIndex] == nullptr) ||
-                (state.widgetSetPosition == nullptr)) {
+                (state.rowSliderButtonWidgets[rowIndex] == nullptr)) {
                 return;
             }
 
@@ -3283,7 +3052,7 @@ namespace ConfigUi::Frontend {
                 kRowSliderButtonMinPositionX +
                 ((kRowSliderButtonMaxPositionX - kRowSliderButtonMinPositionX) * clampedProgress);
 
-            state.widgetSetPosition(
+            ModSDK::UI::Widget_SetPosition(
                 state.rowSliderButtonWidgets[rowIndex],
                 buttonPositionX,
                 kRowSliderButtonPositionY
@@ -3317,20 +3086,18 @@ namespace ConfigUi::Frontend {
             if ((rowIndex >= kVisibleRowCount) ||
                 (state.customWidgetCtor == nullptr) ||
                 (state.customWidgetDtor == nullptr) ||
-                (state.artLabelCtor == nullptr) ||
-                (state.artLabelDtor == nullptr) ||
-                (state.widgetProxyBind == nullptr) ||
                 (state.rowSliderBarWidgets[rowIndex] == nullptr) ||
                 (state.rowSliderButtonWidgets[rowIndex] == nullptr)) {
                 return false;
             }
 
+            auto& api = ModSDK::UIDetail::GetUiApi();
             OpaqueNativeSlider& nativeSlider = state.rowNativeSliders[rowIndex];
             nativeSlider.storage.fill(std::byte{ 0 });
             state.customWidgetCtor(nativeSlider.Get());
-            state.artLabelCtor(nativeSlider.GetKnobProxy());
-            state.widgetProxyBind(nativeSlider.Get(), state.rowSliderBarWidgets[rowIndex]);
-            state.widgetProxyBind(nativeSlider.GetKnobProxy(), state.rowSliderButtonWidgets[rowIndex]);
+            api.ArtLabel_Construct(nativeSlider.GetKnobProxy());
+            ModSDK::UI::WidgetProxy_Bind(nativeSlider.Get(), state.rowSliderBarWidgets[rowIndex]);
+            ModSDK::UI::WidgetProxy_Bind(nativeSlider.GetKnobProxy(), state.rowSliderButtonWidgets[rowIndex]);
             nativeSlider.Callback() = {};
             nativeSlider.CurrentValue() = 0.0f;
             nativeSlider.EnabledFlag() = 1u;
@@ -3338,7 +3105,7 @@ namespace ConfigUi::Frontend {
             nativeSlider.MaxValue() = 1.0f;
 
             if (!BindNativeRowSliderInput(state, nativeSlider)) {
-                state.artLabelDtor(nativeSlider.GetKnobProxy());
+                api.ArtLabel_Destruct(nativeSlider.GetKnobProxy());
                 state.customWidgetDtor(nativeSlider.Get());
                 nativeSlider.storage.fill(std::byte{ 0 });
                 return false;
@@ -3354,7 +3121,6 @@ namespace ConfigUi::Frontend {
         bool TryGetCustomListBoxSelectedIndex(State& state, void* listBoxWidget, long& outSelectedIndex) {
             outSelectedIndex = -1;
             if ((listBoxWidget == nullptr) ||
-                (state.widgetProxyBind == nullptr) ||
                 (state.customListBoxCtor == nullptr) ||
                 (state.customListBoxDtor == nullptr) ||
                 (state.customListBoxGetSelectedIndex == nullptr)) {
@@ -3363,26 +3129,15 @@ namespace ConfigUi::Frontend {
 
             OpaqueCustomListBox listBoxProxy = {};
             state.customListBoxCtor(listBoxProxy.Get());
-            state.widgetProxyBind(listBoxProxy.Get(), listBoxWidget);
+            ModSDK::UI::WidgetProxy_Bind(listBoxProxy.Get(), listBoxWidget);
             outSelectedIndex = state.customListBoxGetSelectedIndex(listBoxProxy.Get());
             state.customListBoxDtor(listBoxProxy.Get());
             return outSelectedIndex >= 0;
         }
 
         bool AddRenderChild(State& state, void* parentRenderObject, void* childWidget, int insertionIndex = -1) {
-            if ((parentRenderObject == nullptr) || (childWidget == nullptr) || (state.addRenderChildAddress == nullptr)) {
-                return false;
-            }
-
-            void* addRenderChildFunction = state.addRenderChildAddress;
-            __asm {
-                mov edi, parentRenderObject
-                mov eax, addRenderChildFunction
-                push insertionIndex
-                push childWidget
-                call eax
-            }
-            return true;
+            (void)state;
+            return ModSDK::UI::AddRenderChild(parentRenderObject, childWidget, insertionIndex);
         }
 
         bool AttachRenderChild(State& state, void* parentWidget, void* childWidget) {
@@ -3425,13 +3180,13 @@ namespace ConfigUi::Frontend {
         }
 
         bool EnsureDonorScreenLoaded(State& state, void*& screenSlot, const char* screenName) {
-            ScreenManagerHandle* const screenManager = GetScreenManager(state);
+            ScreenManagerHandle* const screenManager = GetScreenManager();
             if ((screenManager == nullptr) || (state.loadScreenByName == nullptr)) {
                 return false;
             }
 
             if (screenSlot != nullptr) {
-                void* rootWidget = GetScreenRootWidget(state, screenSlot);
+                void* rootWidget = GetScreenRootWidget(screenSlot);
                 if (rootWidget != nullptr) {
                     return true;
                 }
@@ -3455,7 +3210,7 @@ namespace ConfigUi::Frontend {
                 state.screenSetHidden(screenSlot, true);
             }
 
-            if (GetScreenRootWidget(state, screenSlot) == nullptr) {
+            if (GetScreenRootWidget(screenSlot) == nullptr) {
                 LogError(
                     "Mod Config UI: donor screen '" + std::string(screenName) +
                     "' loaded without a root widget."
@@ -3472,13 +3227,8 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            if (state.widgetProxySetVisible != nullptr) {
-                state.widgetProxySetVisible(widgetProxy, true);
-            }
-
-            if (state.widgetProxySetEnabled != nullptr) {
-                state.widgetProxySetEnabled(widgetProxy, true);
-            }
+            ModSDK::UI::WidgetProxy_SetVisible(widgetProxy, true);
+            ModSDK::UI::WidgetProxy_SetEnabled(widgetProxy, true);
 
             if (state.widgetProxyForceActive != nullptr) {
                 state.widgetProxyForceActive(widgetProxy, true);
@@ -3496,25 +3246,17 @@ namespace ConfigUi::Frontend {
                 (donorScreenName == nullptr) ||
                 (donorWidgetName == nullptr) ||
                 (state.widgetGetPresentation == nullptr) ||
-                (state.widgetSetPresentation == nullptr) ||
                 (state.widgetProxyGetWidget == nullptr) ||
-                (state.genericWidgetCtor == nullptr) ||
-                (state.genericWidgetDtor == nullptr) ||
                 (state.widgetProxyBindByName == nullptr) ||
                 (state.widgetProxyIsValid == nullptr)) {
                 return false;
             }
 
-            OpaqueGenericWidget donorProxy = {};
-            state.genericWidgetCtor(donorProxy.Get());
+            ModSDK::UI::GenericWidget donorProxy;
+            donorProxy.Construct();
+            state.widgetProxyBindByName(donorProxy.get(), donorScreenName, donorWidgetName);
 
-            const auto cleanup = [&]() {
-                state.genericWidgetDtor(donorProxy.Get());
-                };
-
-            state.widgetProxyBindByName(donorProxy.Get(), donorScreenName, donorWidgetName);
-
-            if (!state.widgetProxyIsValid(donorProxy.Get())) {
+            if (!state.widgetProxyIsValid(donorProxy.get())) {
                 LogError(
                     "Mod Config UI could not find donor widget '" +
                     std::string(donorWidgetName) +
@@ -3522,36 +3264,33 @@ namespace ConfigUi::Frontend {
                     std::string(donorScreenName) +
                     "'."
                 );
-                cleanup();
                 return false;
             }
 
-            void* donorRawWidget = state.widgetProxyGetWidget(donorProxy.Get());
+            void* donorRawWidget = state.widgetProxyGetWidget(donorProxy.get());
             if (donorRawWidget != nullptr) {
                 void* presentation = state.widgetGetPresentation(donorRawWidget);
                 if (presentation != nullptr) {
-                    state.widgetSetPresentation(targetRawWidget, presentation);
+                    ModSDK::UI::Widget_SetPresentation(targetRawWidget, presentation);
                 }
                 else if (allowNullPresentation) {
-                    state.widgetSetPresentation(targetRawWidget, nullptr);
+                    ModSDK::UI::Widget_SetPresentation(targetRawWidget, nullptr);
                 }
                 else {
-                    cleanup();
                     return false;
                 }
 
-                if (state.widgetGetHitArea != nullptr && state.widgetSetHitArea != nullptr) {
+                if (state.widgetGetHitArea != nullptr) {
                     void* hitArea = state.widgetGetHitArea(donorRawWidget);
                     if (hitArea != nullptr) {
-                        state.widgetSetHitArea(targetRawWidget, hitArea);
+                        ModSDK::UI::Widget_SetHitArea(targetRawWidget, hitArea);
                     }
                     else if (allowNullPresentation) {
-                        state.widgetSetHitArea(targetRawWidget, nullptr);
+                        ModSDK::UI::Widget_SetHitArea(targetRawWidget, nullptr);
                     }
                 }
             }
 
-            cleanup();
             return true;
         }
 
@@ -3574,10 +3313,7 @@ namespace ConfigUi::Frontend {
             }
 
             // Get DrawChildren extension to access children.
-            if (state.findWidgetExtension == nullptr) {
-                return nullptr;
-            }
-            void* ext = state.findWidgetExtension(widget, kDrawChildrenExtensionId);
+            void* ext = ModSDK::UI::FindWidgetExtension(widget, kDrawChildrenExtensionId);
             if (ext == nullptr) {
                 return nullptr;
             }
@@ -3608,9 +3344,7 @@ namespace ConfigUi::Frontend {
             if ((targetRawWidget == nullptr) ||
                 (donorScreen == nullptr) ||
                 (donorWidgetName == nullptr) ||
-                (state.widgetGetPresentation == nullptr) ||
-                (state.widgetSetPresentation == nullptr) ||
-                (state.screenGetRootWidget == nullptr)) {
+                (state.widgetGetPresentation == nullptr)) {
                 return false;
             }
 
@@ -3627,7 +3361,7 @@ namespace ConfigUi::Frontend {
                 return true;
             }
 
-            void* rootWidget = state.screenGetRootWidget(donorScreen);
+            void* rootWidget = ModSDK::UI::Screen_GetRootWidget(donorScreen);
             if (rootWidget == nullptr) {
                 LogError("Mod Config UI: donor screen has no root widget.");
                 return false;
@@ -3650,7 +3384,7 @@ namespace ConfigUi::Frontend {
                     return false;
                 }
 
-                state.widgetSetPresentation(targetRawWidget, nullptr);
+                ModSDK::UI::Widget_SetPresentation(targetRawWidget, nullptr);
                 LogDebug(
                     "Mod Config UI: donor widget '" +
                     std::string(donorWidgetName) +
@@ -3658,14 +3392,14 @@ namespace ConfigUi::Frontend {
                 );
             }
             else {
-                state.widgetSetPresentation(targetRawWidget, presentation);
+                ModSDK::UI::Widget_SetPresentation(targetRawWidget, presentation);
                 LogDebug("Mod Config UI: transferred Presentation from '" + std::string(donorWidgetName) +
                     "' (addr=" + std::to_string(reinterpret_cast<std::uintptr_t>(presentation)) + ").");
             }
 
-            if (state.widgetGetHitArea != nullptr && state.widgetSetHitArea != nullptr) {
+            if (state.widgetGetHitArea != nullptr) {
                 void* hitArea = state.widgetGetHitArea(donorRawWidget);
-                state.widgetSetHitArea(targetRawWidget, hitArea);
+                ModSDK::UI::Widget_SetHitArea(targetRawWidget, hitArea);
             }
 
             return true;
@@ -3676,7 +3410,7 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            void* rootWidget = GetScreenRootWidget(state, donorScreen);
+            void* rootWidget = GetScreenRootWidget(donorScreen);
             if (rootWidget == nullptr) {
                 LogWarning(
                     "Mod Config UI: donor screen '" + std::string(donorScreenName) +
@@ -3816,7 +3550,7 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            ScreenManagerHandle* const screenManager = GetScreenManager(state);
+            ScreenManagerHandle* const screenManager = GetScreenManager();
             if (screenManager == nullptr) {
                 return false;
             }
@@ -3855,50 +3589,24 @@ namespace ConfigUi::Frontend {
             return true;
         }
 
-        bool TrySetTextLabel(State& state, OpaqueTextLabel& textLabel, const std::string& text, bool multiline) {
-            if ((state.textLabelSetText == nullptr) || (state.locStringCtor == nullptr) || (state.locStringDtor == nullptr)) {
-                return false;
-            }
-
-            if (state.textLabelSetAutoSize != nullptr) {
-                state.textLabelSetAutoSize(textLabel.Get(), false);
-            }
-
-            if (state.textLabelSetMultiline != nullptr) {
-                state.textLabelSetMultiline(textLabel.Get(), multiline);
-            }
-
-            const std::wstring wideText = ToWide(text);
-            OpaqueLocString locString = {};
-            state.locStringCtor(locString.Get(), wideText.c_str());
-            state.textLabelSetText(textLabel.Get(), locString.Get());
-            state.locStringDtor(locString.Get());
+        bool TrySetTextLabel(ModSDK::UI::TextLabel& textLabel, const std::string& text, bool multiline) {
+            textLabel.SetAutoSize(false);
+            textLabel.SetMultiline(multiline);
+            textLabel.SetText(ToWide(text).c_str());
             return true;
         }
 
-        bool TrySetButtonText(State& state, OpaqueButton& button, const std::string& text) {
-            if ((state.buttonSetText == nullptr) || (state.locStringCtor == nullptr) || (state.locStringDtor == nullptr)) {
-                return false;
-            }
-
-            const std::wstring wideText = ToWide(text);
-            OpaqueLocString locString = {};
-            state.locStringCtor(locString.Get(), wideText.c_str());
-            state.buttonSetText(button.Get(), locString.Get());
-            state.locStringDtor(locString.Get());
+        bool TrySetButtonText(ModSDK::UI::Button& button, const std::string& text) {
+            button.SetText(ToWide(text).c_str());
             return true;
         }
 
-        bool TrySetCheckButtonText(State& state, OpaqueCheckButton& checkButton, const std::string& text) {
-            if ((state.checkButtonSetText == nullptr) || (state.locStringCtor == nullptr) || (state.locStringDtor == nullptr)) {
+        bool TrySetCheckButtonText(State& state, ModSDK::UI::CheckButton& checkButton, const std::string& text) {
+            if (state.checkButtonSetText == nullptr) {
                 return false;
             }
-
-            const std::wstring wideText = ToWide(text);
-            OpaqueLocString locString = {};
-            state.locStringCtor(locString.Get(), wideText.c_str());
-            state.checkButtonSetText(checkButton.Get(), locString.Get());
-            state.locStringDtor(locString.Get());
+            ModSDK::UI::LocString locString(ToWide(text).c_str());
+            state.checkButtonSetText(checkButton.get(), locString.get());
             return true;
         }
 
@@ -3912,17 +3620,13 @@ namespace ConfigUi::Frontend {
                 ResetOverlayProxyStorage(state);
             }
 
-            ScreenManagerHandle* const screenManager = GetScreenManager(state);
+            ScreenManagerHandle* const screenManager = GetScreenManager();
             if (screenManager == nullptr) {
                 LogError("Mod Config UI cannot build the overlay because the ScreenManager is unavailable.");
                 return false;
             }
 
-            if ((state.loadScreenByName == nullptr) ||
-                (state.findWidgetByName == nullptr) ||
-                (state.buttonCtor == nullptr) ||
-                (state.textLabelCtor == nullptr) ||
-                (state.widgetProxyBind == nullptr)) {
+            if (state.loadScreenByName == nullptr) {
                 LogError("Mod Config UI cannot build the overlay because one or more UI functions are unavailable.");
                 return false;
             }
@@ -3951,7 +3655,7 @@ namespace ConfigUi::Frontend {
                 state.screenSetHidden(state.screen, true);
             }
 
-            state.rootWidgetRaw = GetScreenRootWidget(state, state.screen);
+            state.rootWidgetRaw = GetScreenRootWidget(state.screen);
             if (state.rootWidgetRaw == nullptr) {
                 LogError("Mod Config UI: GetRootWidget returned null.");
                 return false;
@@ -4044,13 +3748,10 @@ namespace ConfigUi::Frontend {
 
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
                 const std::string rowCheckButtonName = MakeRowCheckButtonName(i);
-                state.rowCheckButtonWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowCheckButtonName.c_str(), 0);
+                state.rowCheckButtonWidgets[i] = ModSDK::UI::FindWidget(state.rootWidgetRaw, rowCheckButtonName.c_str());
                 if (state.rowCheckButtonWidgets[i] == nullptr) {
-                    state.rowCheckButtonWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowCheckButtonName.c_str(), 1);
-                    if (state.rowCheckButtonWidgets[i] == nullptr) {
-                        LogError("Mod Config UI: Failed to resolve preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
-                        return false;
-                    }
+                    LogError("Mod Config UI: Failed to resolve preloaded CheckButton widget '" + rowCheckButtonName + "' for row " + std::to_string(i) + ".");
+                    return false;
                 }
 
                 ConfigureRawWidget(
@@ -4079,17 +3780,14 @@ namespace ConfigUi::Frontend {
                 const std::string rowSliderButtonName = MakeRowSliderButtonName(i);
                 const std::string rowSliderBarName = MakeRowSliderBarName(i);
 
-                state.rowSliderWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowSliderName.c_str(), 0);
+                state.rowSliderWidgets[i] = ModSDK::UI::FindWidget(state.rootWidgetRaw, rowSliderName.c_str());
                 if (state.rowSliderWidgets[i] == nullptr) {
-                    state.rowSliderWidgets[i] = state.findWidgetByName(state.rootWidgetRaw, rowSliderName.c_str(), 1);
-                    if (state.rowSliderWidgets[i] == nullptr) {
-                        LogError("Mod Config UI: Failed to resolve preloaded slider widget '" + rowSliderName + "' for row " + std::to_string(i) + ".");
-                        return false;
-                    }
+                    LogError("Mod Config UI: Failed to resolve preloaded slider widget '" + rowSliderName + "' for row " + std::to_string(i) + ".");
+                    return false;
                 }
 
-                state.rowSliderButtonWidgets[i] = FindNamedWidget(state, state.rowSliderWidgets[i], rowSliderButtonName.c_str());
-                state.rowSliderBarWidgets[i] = FindNamedWidget(state, state.rowSliderWidgets[i], rowSliderBarName.c_str());
+                state.rowSliderButtonWidgets[i] = ModSDK::UI::FindWidget(state.rowSliderWidgets[i], rowSliderButtonName.c_str());
+                state.rowSliderBarWidgets[i] = ModSDK::UI::FindWidget(state.rowSliderWidgets[i], rowSliderBarName.c_str());
                 if ((state.rowSliderButtonWidgets[i] == nullptr) || (state.rowSliderBarWidgets[i] == nullptr)) {
                     LogError(
                         "Mod Config UI: Failed to resolve slider child widgets for row " +
@@ -4220,8 +3918,8 @@ namespace ConfigUi::Frontend {
                 LogWarning("Mod Config UI: Failed to transfer panel ScrollBar page-up Presentation from donor.");
             }
             SetRawWidgetVisible(state, state.panelScrollBarWidget, false);
-            state.panelScrollBarTrackVisualWidget = FindNamedWidget(state, state.rootWidgetRaw, kPanelScrollBarTrackVisualName);
-            state.panelScrollBarThumbVisualWidget = FindNamedWidget(state, state.rootWidgetRaw, kPanelScrollBarThumbVisualName);
+            state.panelScrollBarTrackVisualWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, kPanelScrollBarTrackVisualName);
+            state.panelScrollBarThumbVisualWidget = ModSDK::UI::FindWidget(state.rootWidgetRaw, kPanelScrollBarThumbVisualName);
             if ((state.panelScrollBarTrackVisualWidget != nullptr) &&
                 (state.panelScrollBarThumbVisualWidget != nullptr)) {
                 ConfigureRawWidget(
@@ -4245,32 +3943,24 @@ namespace ConfigUi::Frontend {
                     state.rootWidgetRaw
                 );
 
-                if (state.widgetSetHitArea != nullptr) {
-                    // These are display-only overlays. Let the underlying native scrollbar subtree receive input.
-                    state.widgetSetHitArea(state.panelScrollBarTrackVisualWidget, nullptr);
-                    state.widgetSetHitArea(state.panelScrollBarThumbVisualWidget, nullptr);
-                }
+                // These are display-only overlays. Let the underlying native scrollbar subtree receive input.
+                ModSDK::UI::Widget_SetHitArea(state.panelScrollBarTrackVisualWidget, nullptr);
+                ModSDK::UI::Widget_SetHitArea(state.panelScrollBarThumbVisualWidget, nullptr);
 
-                OpaqueArtLabel panelScrollTrackArtLabel = {};
-                OpaqueArtLabel panelScrollThumbArtLabel = {};
-                const bool boundTrackArtLabel = BindArtLabelProxy(state, panelScrollTrackArtLabel, state.panelScrollBarTrackVisualWidget);
-                const bool boundThumbArtLabel = BindArtLabelProxy(state, panelScrollThumbArtLabel, state.panelScrollBarThumbVisualWidget);
-                if (boundTrackArtLabel && (state.artLabelSetAllArtVisible != nullptr)) {
-                    state.artLabelSetAllArtVisible(panelScrollTrackArtLabel.Get(), true);
+                ModSDK::UI::ArtLabel panelScrollTrackArtLabel;
+                ModSDK::UI::ArtLabel panelScrollThumbArtLabel;
+                const bool boundTrackArtLabel = BindArtLabelProxy(panelScrollTrackArtLabel, state.panelScrollBarTrackVisualWidget);
+                const bool boundThumbArtLabel = BindArtLabelProxy(panelScrollThumbArtLabel, state.panelScrollBarThumbVisualWidget);
+                if (boundTrackArtLabel) {
+                    panelScrollTrackArtLabel.SetAllArtVisible(true);
                 }
-                if (boundThumbArtLabel && (state.artLabelSetAllArtVisible != nullptr)) {
-                    state.artLabelSetAllArtVisible(panelScrollThumbArtLabel.Get(), true);
+                if (boundThumbArtLabel) {
+                    panelScrollThumbArtLabel.SetAllArtVisible(true);
                 }
                 ApplyRawWidgetState(state, state.panelScrollBarTrackVisualWidget);
                 ApplyRawWidgetState(state, state.panelScrollBarThumbVisualWidget);
                 SetRawWidgetVisible(state, state.panelScrollBarTrackVisualWidget, false);
                 SetRawWidgetVisible(state, state.panelScrollBarThumbVisualWidget, false);
-                if (boundTrackArtLabel && (state.artLabelDtor != nullptr)) {
-                    state.artLabelDtor(panelScrollTrackArtLabel.Get());
-                }
-                if (boundThumbArtLabel && (state.artLabelDtor != nullptr)) {
-                    state.artLabelDtor(panelScrollThumbArtLabel.Get());
-                }
                 LogDebug("Mod Config UI: Resolved panel scrollbar visuals from the active screen.");
             }
             else {
@@ -4662,63 +4352,51 @@ namespace ConfigUi::Frontend {
             LogDebug("Mod Config UI: Native mod selector ComboBox created, attached, and child widgets resolved.");
 
             // Step 14: Construct and bind title, row label, bool, numeric, and enum proxies.
-            state.textLabelCtor(state.titleLabel.Get());
-            state.widgetProxyBind(state.titleLabel.Get(), state.titleLabelRaw);
-            ApplyWidgetProxyState(state, state.titleLabel.Get());
-            TrySetTextLabel(state, state.titleLabel, "Mod Options", false);
+            state.titleLabel.Construct(state.titleLabelRaw);
+            ApplyWidgetProxyState(state, state.titleLabel.get());
+            TrySetTextLabel(state.titleLabel, "Mod Options", false);
 
-            state.textLabelCtor(state.modSelectorValueLabel.Get());
-            state.widgetProxyBind(state.modSelectorValueLabel.Get(), state.modSelectorValueLabelWidget);
-            ApplyWidgetProxyState(state, state.modSelectorValueLabel.Get());
-            TrySetTextLabel(state, state.modSelectorValueLabel, BuildEmptyButtonText(), false);
+            state.modSelectorValueLabel.Construct(state.modSelectorValueLabelWidget);
+            ApplyWidgetProxyState(state, state.modSelectorValueLabel.get());
+            TrySetTextLabel(state.modSelectorValueLabel, BuildEmptyButtonText(), false);
 
-            if (!BindButtonProxy(state, state.modSelectorButton, state.modSelectorArrowButtonWidget)) {
+            if (!BindButtonProxy(state.modSelectorButton, state.modSelectorArrowButtonWidget)) {
                 LogError("Mod Config UI: Failed to bind the mod selector button proxy.");
                 return false;
             }
-            if (state.widgetProxySetVisible != nullptr) {
-                state.widgetProxySetVisible(state.modSelectorButton.Get(), true);
-            }
-            if (state.widgetProxySetEnabled != nullptr) {
-                state.widgetProxySetEnabled(state.modSelectorButton.Get(), true);
-            }
+            state.modSelectorButton.SetVisible(true);
+            state.modSelectorButton.SetEnabled(true);
 
             for (std::size_t i = 0u; i < kVisibleRowCount; ++i) {
-                state.textLabelCtor(state.rowLabels[i].Get());
-                state.widgetProxyBind(state.rowLabels[i].Get(), state.rowLabelWidgets[i]);
-                ApplyWidgetProxyState(state, state.rowLabels[i].Get());
-                TrySetTextLabel(state, state.rowLabels[i], BuildEmptyButtonText(), false);
+                state.rowLabels[i].Construct(state.rowLabelWidgets[i]);
+                ApplyWidgetProxyState(state, state.rowLabels[i].get());
+                TrySetTextLabel(state.rowLabels[i], BuildEmptyButtonText(), false);
 
-                state.textLabelCtor(state.rowValueLabels[i].Get());
-                state.widgetProxyBind(state.rowValueLabels[i].Get(), state.rowValueLabelWidgets[i]);
-                ApplyWidgetProxyState(state, state.rowValueLabels[i].Get());
-                TrySetTextLabel(state, state.rowValueLabels[i], BuildEmptyButtonText(), false);
+                state.rowValueLabels[i].Construct(state.rowValueLabelWidgets[i]);
+                ApplyWidgetProxyState(state, state.rowValueLabels[i].get());
+                TrySetTextLabel(state.rowValueLabels[i], BuildEmptyButtonText(), false);
 
-                if (!BindButtonProxy(state, state.rowArrowButtons[i], state.rowArrowButtonWidgets[i])) {
+                if (!BindButtonProxy(state.rowArrowButtons[i], state.rowArrowButtonWidgets[i])) {
                     LogError("Mod Config UI: Failed to bind ComboBox button proxy for row " + std::to_string(i) + ".");
                     return false;
                 }
-                if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.rowArrowButtons[i].Get(), true);
-                }
-                if (state.widgetProxySetEnabled != nullptr) {
-                    state.widgetProxySetEnabled(state.rowArrowButtons[i].Get(), true);
-                }
+                state.rowArrowButtons[i].SetVisible(true);
+                state.rowArrowButtons[i].SetEnabled(true);
 
-                if (!BindCheckButtonProxy(state, state.rowCheckButtons[i], state.rowCheckButtonWidgets[i])) {
+                if (!BindCheckButtonProxy(state.rowCheckButtons[i], state.rowCheckButtonWidgets[i])) {
                     LogError("Mod Config UI: Failed to bind CheckButton proxy for row " + std::to_string(i) + ".");
                     return false;
                 }
-                ApplyWidgetProxyState(state, state.rowCheckButtons[i].Get());
+                ApplyWidgetProxyState(state, state.rowCheckButtons[i].get());
                 if (!TrySetCheckButtonText(state, state.rowCheckButtons[i], BuildEmptyButtonText())) {
                     LogWarning("Mod Config UI: Failed to blank CheckButton text for row " + std::to_string(i) + ".");
                 }
 
-                if (!BindGenericWidgetProxy(state, state.rowSliders[i], state.rowSliderWidgets[i])) {
+                if (!BindGenericWidgetProxy(state.rowSliders[i], state.rowSliderWidgets[i])) {
                     LogError("Mod Config UI: Failed to bind slider proxy for row " + std::to_string(i) + ".");
                     return false;
                 }
-                ApplyWidgetProxyState(state, state.rowSliders[i].Get());
+                ApplyWidgetProxyState(state, state.rowSliders[i].get());
             }
             LogDebug("Mod Config UI: All proxy objects constructed.");
 
@@ -4728,13 +4406,11 @@ namespace ConfigUi::Frontend {
         }
 
         void HideAllRowControls(State& state, std::size_t rowIndex) {
-            if (state.widgetProxySetVisible != nullptr) {
-                state.widgetProxySetVisible(state.rowLabels[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowValueLabels[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowArrowButtons[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowSliders[rowIndex].Get(), false);
-            }
+            state.rowLabels[rowIndex].SetVisible(false);
+            state.rowValueLabels[rowIndex].SetVisible(false);
+            state.rowArrowButtons[rowIndex].SetVisible(false);
+            state.rowCheckButtons[rowIndex].SetVisible(false);
+            state.rowSliders[rowIndex].SetVisible(false);
             SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], false);
@@ -4751,15 +4427,13 @@ namespace ConfigUi::Frontend {
             state.rowObservedListBoxSelection[rowIndex] = -1;
             state.rowHasObservedListBoxSelection[rowIndex] = false;
 
-            TrySetTextLabel(state, state.rowLabels[rowIndex], BuildRowLabelText(rowOption), false);
+            TrySetTextLabel(state.rowLabels[rowIndex], BuildRowLabelText(rowOption), false);
 
             // Hide all control widgets first, then show the right ones for this option type.
-            if (state.widgetProxySetVisible != nullptr) {
-                state.widgetProxySetVisible(state.rowValueLabels[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowArrowButtons[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), false);
-                state.widgetProxySetVisible(state.rowSliders[rowIndex].Get(), false);
-            }
+            state.rowValueLabels[rowIndex].SetVisible(false);
+            state.rowArrowButtons[rowIndex].SetVisible(false);
+            state.rowCheckButtons[rowIndex].SetVisible(false);
+            state.rowSliders[rowIndex].SetVisible(false);
             SetRawWidgetVisible(state, state.rowComboBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowListBoxWidgets[rowIndex], false);
             SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], false);
@@ -4768,13 +4442,9 @@ namespace ConfigUi::Frontend {
             switch (opt.type) {
             case CoHModSDKConfigType_Bool:
                 // Show checkbox.
-                if (state.checkButtonSetChecked != nullptr) {
-                    state.checkButtonSetChecked(state.rowCheckButtons[rowIndex].Get(), opt.currentValue.boolValue != 0u);
-                }
+                state.rowCheckButtons[rowIndex].SetChecked(opt.currentValue.boolValue != 0u);
                 SetRawWidgetVisible(state, state.rowCheckButtonWidgets[rowIndex], true);
-                if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.rowCheckButtons[rowIndex].Get(), true);
-                }
+                state.rowCheckButtons[rowIndex].SetVisible(true);
                 break;
 
             case CoHModSDKConfigType_Int:
@@ -4783,9 +4453,7 @@ namespace ConfigUi::Frontend {
                 const float progress = ComputeNumericOptionProgress(opt);
                 SetNativeRowSliderProgress(state, rowIndex, progress);
                 SetRawWidgetVisible(state, state.rowSliderWidgets[rowIndex], true);
-                if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.rowSliders[rowIndex].Get(), true);
-                }
+                state.rowSliders[rowIndex].SetVisible(true);
                 break;
             }
 
@@ -4798,17 +4466,13 @@ namespace ConfigUi::Frontend {
                 if (!PopulateEnumListBox(state, state.rowListBoxWidgets[rowIndex], opt, rowIndex)) {
                     LogWarning("Mod Config UI: Failed to populate enum list box for row " + std::to_string(rowIndex) + ".");
                 }
-                TrySetTextLabel(state, state.rowValueLabels[rowIndex], BuildRowValueText(rowOption), false);
-                if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.rowValueLabels[rowIndex].Get(), true);
-                    state.widgetProxySetVisible(state.rowArrowButtons[rowIndex].Get(), true);
-                }
+                TrySetTextLabel(state.rowValueLabels[rowIndex], BuildRowValueText(rowOption), false);
+                state.rowValueLabels[rowIndex].SetVisible(true);
+                state.rowArrowButtons[rowIndex].SetVisible(true);
                 break;
             }
 
-            if (state.widgetProxySetVisible != nullptr) {
-                state.widgetProxySetVisible(state.rowLabels[rowIndex].Get(), true);
-            }
+            state.rowLabels[rowIndex].SetVisible(true);
 
             state.rowActiveControlType[rowIndex] = opt.type;
         }
@@ -4826,14 +4490,14 @@ namespace ConfigUi::Frontend {
             EnsureSelectedOptionVisible(state);
 
             bool updatedAllWidgets =
-                TrySetTextLabel(state, state.titleLabel, BuildTitleText(selectedMod, hasSelectedOption ? &selectedOption : nullptr), false);
+                TrySetTextLabel(state.titleLabel, BuildTitleText(selectedMod, hasSelectedOption ? &selectedOption : nullptr), false);
 
             if (hasSelectedMod) {
                 ConfigureModSelectorListBoxGeometry(state);
                 SetRawWidgetVisible(state, state.modSelectorComboBoxWidget, true);
                 SetRawWidgetVisible(state, state.modSelectorListBoxWidget, true);
                 updatedAllWidgets =
-                    TrySetTextLabel(state, state.modSelectorValueLabel, BuildModDisplayText(*selectedMod), false) &&
+                    TrySetTextLabel(state.modSelectorValueLabel, BuildModDisplayText(*selectedMod), false) &&
                     updatedAllWidgets;
                 if (!PopulateModListBox(state)) {
                     LogWarning("Mod Config UI: Failed to populate the mod selector list box.");
@@ -4850,20 +4514,16 @@ namespace ConfigUi::Frontend {
                 state.observedModListSelection = selectedNativeIndex;
                 state.hasObservedModListSelection = selectedNativeIndex >= 0;
 
-                if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.modSelectorValueLabel.Get(), true);
-                    state.widgetProxySetVisible(state.modSelectorButton.Get(), true);
-                }
+                state.modSelectorValueLabel.SetVisible(true);
+                state.modSelectorButton.SetVisible(true);
             }
             else {
                 SetRawWidgetVisible(state, state.modSelectorComboBoxWidget, false);
                 SetRawWidgetVisible(state, state.modSelectorListBoxWidget, false);
                 state.observedModListSelection = -1;
                 state.hasObservedModListSelection = false;
-                if (state.widgetProxySetVisible != nullptr) {
-                    state.widgetProxySetVisible(state.modSelectorValueLabel.Get(), false);
-                    state.widgetProxySetVisible(state.modSelectorButton.Get(), false);
-                }
+                state.modSelectorValueLabel.SetVisible(false);
+                state.modSelectorButton.SetVisible(false);
             }
 
             for (std::size_t rowIndex = 0u; rowIndex < kVisibleRowCount; ++rowIndex) {
@@ -5204,7 +4864,7 @@ namespace ConfigUi::Frontend {
 
             SetNativeRowSliderProgress(state, rowIndex, appliedProgress);
             state.selectedOptionIndex = rowOption.flatIndex;
-            TrySetTextLabel(state, state.titleLabel, BuildTitleText(rowOption.modEntry, &rowOption), false);
+            TrySetTextLabel(state.titleLabel, BuildTitleText(rowOption.modEntry, &rowOption), false);
 
             if (!valueChanged) {
                 return false;
@@ -5295,7 +4955,7 @@ namespace ConfigUi::Frontend {
                 return;
             }
 
-            ScreenManagerHandle* screenManager = GetScreenManager(state);
+            ScreenManagerHandle* screenManager = GetScreenManager();
             ReleaseRetiredOverlayScreenIfPending(state, screenManager);
             if ((state.originalGameWindowProc == nullptr) && !state.shutdownInProgress) {
                 InstallGameWindowHook(state);
@@ -5363,8 +5023,8 @@ namespace ConfigUi::Frontend {
             }
 
             if (PollRawWidgetActiveEdge(state, state.modSelectorComboBoxWidget, state.modSelectorComboBoxWasActive) ||
-                PollWidgetActiveEdge(state, state.modSelectorValueLabel.Get(), state.modSelectorValueLabelWasActive) ||
-                PollWidgetActiveEdge(state, state.modSelectorButton.Get(), state.modSelectorArrowButtonWasActive)) {
+                PollWidgetActiveEdge(state, state.modSelectorValueLabel.get(), state.modSelectorValueLabelWasActive) ||
+                PollWidgetActiveEdge(state, state.modSelectorButton.get(), state.modSelectorArrowButtonWasActive)) {
                 state.modSelectorDropDownOpen = true;
                 state.activeEnumDropDownRowIndex = -1;
                 LogDebug("Mod Config UI: Mod selector ComboBox button clicked.");
@@ -5389,15 +5049,15 @@ namespace ConfigUi::Frontend {
                 // Poll all widget types — only the visible one will have Active state.
                 if ((state.rowActiveControlType[i] == CoHModSDKConfigType_Enum) &&
                     (PollRawWidgetActiveEdge(state, state.rowComboBoxWidgets[i], state.rowComboBoxWasActive[i]) ||
-                        PollWidgetActiveEdge(state, state.rowValueLabels[i].Get(), state.rowValueLabelWasActive[i]))) {
+                        PollWidgetActiveEdge(state, state.rowValueLabels[i].get(), state.rowValueLabelWasActive[i]))) {
                     state.modSelectorDropDownOpen = false;
                     state.activeEnumDropDownRowIndex = static_cast<long>(i);
                     LogDebug("Mod Config UI: Native ComboBox body clicked for row " + std::to_string(i) + ".");
                 }
-                if (PollWidgetActiveEdge(state, state.rowArrowButtons[i].Get(), state.rowArrowButtonWasActive[i])) {
+                if (PollWidgetActiveEdge(state, state.rowArrowButtons[i].get(), state.rowArrowButtonWasActive[i])) {
                     OnRowControlClicked(state, i);
                 }
-                if (PollWidgetActiveEdge(state, state.rowCheckButtons[i].Get(), state.rowCheckButtonWasActive[i])) {
+                if (PollWidgetActiveEdge(state, state.rowCheckButtons[i].get(), state.rowCheckButtonWasActive[i])) {
                     OnRowControlClicked(state, i);
                 }
                 if (((state.rowActiveControlType[i] == CoHModSDKConfigType_Int) ||
