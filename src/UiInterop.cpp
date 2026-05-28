@@ -10,6 +10,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <string>
 #include <string_view>
 
@@ -31,8 +32,7 @@ namespace ConfigUi::Frontend {
         constexpr int kStreamModeRead = 1;
         constexpr char kFileOverrideAlias[] = "DATA";
         constexpr char kFileOverrideSubPath[] = "";
-        constexpr wchar_t kScreenFileRelativeDir[] = L"mods\\cohmodconfigui_data\\";
-        constexpr char kScreenFileName[] = "cohmodconfigui";
+        constexpr char kScreenDataRelativeDir[] = "data\\modconfigui\\";
 
         using FilePathHDCreateFn = void* (__stdcall*)(const wchar_t* path, int streamMode);
         using FilePathAddAliasFn = bool(__stdcall*)(const char* alias, const char* subPath, long priority, void* source);
@@ -49,7 +49,7 @@ namespace ConfigUi::Frontend {
         constexpr char kCheckButtonWidgetTypeName[] = "CheckButton";
         constexpr char kTextLabelWidgetTypeName[] = "TextLabel";
         constexpr char kScrollBarWidgetTypeName[] = "ScrollBar";
-        constexpr char kScreenName[] = "cohmodconfigui";
+        constexpr char kScreenName[] = "modconfigui";
         constexpr char kTemplateScreenName[] = "prompt_performance_test";
         constexpr char kTemplatePanelWidgetName[] = "perfGrp";
         constexpr char kTemplateLabelWidgetName[] = "minimumResults";
@@ -1496,21 +1496,17 @@ namespace ConfigUi::Frontend {
                 return false;
             }
 
-            // Build absolute path to our data directory next to the game executable.
-            wchar_t gameDir[MAX_PATH] = {};
-            const DWORD len = GetModuleFileNameW(nullptr, gameDir, MAX_PATH);
-            if ((len == 0u) || (len >= MAX_PATH)) {
-                LogError("Mod Config UI could not determine the game directory.");
+            const CoHModSDKRuntimeInfoV1* runtimeInfo = ModSDK::Runtime::GetInfo();
+            if ((runtimeInfo == nullptr) || (runtimeInfo->loaderDirectory == nullptr) || (*runtimeInfo->loaderDirectory == '\0')) {
+                LogError("Mod Config UI could not determine the SDK directory.");
                 return false;
             }
 
-            // Strip executable name to get directory.
-            wchar_t* lastSlash = wcsrchr(gameDir, L'\\');
-            if (lastSlash != nullptr) {
-                *(lastSlash + 1) = L'\0';
+            std::filesystem::path dataPath = std::filesystem::path(runtimeInfo->loaderDirectory) / kScreenDataRelativeDir;
+            std::wstring dataDir = dataPath.wstring();
+            if (!dataDir.empty() && (dataDir.back() != L'\\') && (dataDir.back() != L'/')) {
+                dataDir.push_back(L'\\');
             }
-
-            std::wstring dataDir = std::wstring(gameDir) + kScreenFileRelativeDir;
             {
                 std::string narrowDir(dataDir.size(), '\0');
                 for (size_t i = 0; i < dataDir.size(); ++i) narrowDir[i] = static_cast<char>(dataDir[i]);
