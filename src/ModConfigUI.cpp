@@ -8,7 +8,7 @@
 namespace {
     constexpr char kModId[] = "de.tosox.modconfigui";
     constexpr char kModName[] = "Mod Config UI";
-    constexpr char kModVersion[] = "0.1.0";
+    constexpr char kModVersion[] = "0.2.1";
     constexpr char kModAuthor[] = "Tosox";
     constexpr char kTestCategory[] = "UI Test";
 

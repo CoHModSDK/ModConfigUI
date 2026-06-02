@@ -8,8 +8,9 @@ Mod Config UI is a mod for `Company of Heroes Relaunch` built on top of `CoHModS
 
 1. Install the `CoHModSDK` loader in your game directory
 2. Copy `ModConfigUI.dll` into the `mods` folder
-3. Add `ModConfigUI.dll` to `CoHModSDKLoader.ini`
-4. Start the game
+3. Copy `data\modconfigui` into `ModSDK\data\modconfigui`
+4. Add `ModConfigUI.dll` to `CoHModSDKLoader.ini`
+5. Start the game
 
 ## 🛠️ Building
 
